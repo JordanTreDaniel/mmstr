@@ -20,17 +20,30 @@ Build a full-stack web app called **"ExplicaMe"** based on **"Make Me Say That's
 
 ### 2. Messages & Their Points:
 - Each message is broken down into **assertions/points/questions** (atomic claims)
-- AI-suggested breakdowns provided to message author
+- AI breakdowns are INTERNAL ONLY (not shown to users, used for granular comparison)
 - Messages can reference older messages (iPhone-style "replying to" with snippet)
 - Main thread view shows only messages, not interpretation sub-conversations
+- **Character limits**:
+  - Max: 280 characters per message
+  - Min: 10 characters (3+ words)
+  - Messages under minimum do NOT require interpretation to respond
+- **Message status icons** (half-overlaid on message card):
+  - 🧠 Brain: Open interpretation modal
+  - 💬 Speaking: Interpretation accepted, can now respond
+  - ✓ Checkmark: Interpretation completed and accepted
 
 ### 3. Interpretations:
 - **Replier must interpret the ENTIRE message** covering every point before they can reply
 - Creates new "interpretation" linked to that message and replier's ID
 - Interpretation unlocks ability to respond
+- **Writing interpretations**:
+  - Original message is HIDDEN while writing interpretation
+  - Users can toggle back to view original, but cannot see both simultaneously
+  - Track view count in background (how many times they looked back)
 - **Grading**:
   - Vectors determine similarity between original and interpretation
   - High meaning similarity + different wording = best score
+  - **Auto-reject if too similar wording**: >70% same words = automatic rejection
   - Auto-accept threshold: configurable per user (default 90%+)
   - Auto-accept is a suggestion; only human can truly accept (except in arbitration)
   - Users see score even if auto-accepted
@@ -110,8 +123,9 @@ Shows progression (only displays what's been reached):
 5. Arbitration (if triggered)
 
 **Author Actions:**
-- Review interpretation and its points one-by-one
-- Accept or reject with notes
+- Review interpretation point-by-point
+- Grade each point individually (Pass/Fail)
+- Accept or reject overall with notes
 - See similarity score and auto-accept suggestion
 
 **Replier Actions:**
