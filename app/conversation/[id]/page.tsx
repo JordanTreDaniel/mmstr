@@ -5,8 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Header, PageContainer } from '@/app/components/layout';
 import Button from '@/app/components/ui/Button';
 import Card from '@/app/components/ui/Card';
+import { MessageList, MessageComposer } from '@/app/components/thread';
 import { useConversations } from '@/hooks/use-conversations';
-import type { Convo } from '@/types/entities';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { getConversationMessages } from '@/app/actions/messages';
+import { getMessageStatus } from '@/lib/message-status';
+import type { Convo, Message } from '@/types/entities';
+import type { MessageWithMetadata } from '@/app/components/thread';
 
 interface ConversationPageProps {
   params: {
@@ -17,12 +22,19 @@ interface ConversationPageProps {
 export default function ConversationPage({ params }: ConversationPageProps) {
   const router = useRouter();
   const { getConversation } = useConversations();
+  const { currentUserId, getUserById } = useCurrentUser();
   const [conversation, setConversation] = useState<Convo | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesWithMetadata, setMessagesWithMetadata] = useState<MessageWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadConversation();
+  }, [params.id]);
+
+  useEffect(() => {
+    loadMessages();
   }, [params.id]);
 
   const loadConversation = async () => {
@@ -41,6 +53,53 @@ export default function ConversationPage({ params }: ConversationPageProps) {
       setError('Failed to load conversation');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMessages = async () => {
+    try {
+      const msgs = await getConversationMessages(params.id);
+      setMessages(msgs);
+      
+      // Build metadata for each message
+      const withMetadata: MessageWithMetadata[] = msgs.map((msg) => {
+        const user = getUserById(msg.userId);
+        const userName = user?.name || 'Unknown User';
+        
+        // For now, use simplified status determination
+        // TODO: Implement full interpretation-based status in future tasks
+        const isOwnMessage = msg.userId === currentUserId;
+        const requiresInterpretation = msg.text.trim().length >= 10;
+        
+        const status = getMessageStatus({
+          isOwnMessage,
+          requiresInterpretation,
+          hasInterpretation: false, // TODO: Check actual interpretations
+          hasResponded: false, // TODO: Check if user has responded
+        });
+        
+        // Get reply-to snippet if applicable
+        let replyingToSnippet: string | null = null;
+        if (msg.replyingToMessageId) {
+          const replyToMsg = msgs.find(m => m.id === msg.replyingToMessageId);
+          if (replyToMsg) {
+            replyingToSnippet = replyToMsg.text.length > 50
+              ? `${replyToMsg.text.substring(0, 50)}...`
+              : replyToMsg.text;
+          }
+        }
+        
+        return {
+          message: msg,
+          userName,
+          status,
+          replyingToSnippet,
+        };
+      });
+      
+      setMessagesWithMetadata(withMetadata);
+    } catch (err) {
+      console.error('Error loading messages:', err);
     }
   };
 
@@ -142,12 +201,27 @@ export default function ConversationPage({ params }: ConversationPageProps) {
           </div>
         </div>
 
-        {/* Placeholder for messages (to be implemented in task 5.2) */}
-        <Card variant="elevated" padding="lg" className="text-center">
-          <p className="text-gray-600 dark:text-gray-400">
-            Message list will be displayed here (Task 5.2)
-          </p>
+        {/* Message List */}
+        <Card variant="elevated" padding="lg">
+          <MessageList 
+            messages={messagesWithMetadata}
+            onMessageClick={(messageId) => {
+              // TODO: Open message modal (future task)
+              console.log('Message clicked:', messageId);
+            }}
+          />
         </Card>
+
+        {/* Message Composer */}
+        <div className="mt-4">
+          <Card variant="elevated" padding="none">
+            <MessageComposer
+              convoId={params.id}
+              messages={messages}
+              onMessageSent={loadMessages}
+            />
+          </Card>
+        </div>
       </PageContainer>
     </div>
   );
