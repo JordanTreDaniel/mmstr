@@ -1,13 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import Button from '@/app/components/ui/Button';
 import Card from '@/app/components/ui/Card';
 import { Header, PageContainer } from '@/app/components/layout';
+import CreateConvoModal from '@/app/components/modals/CreateConvoModal';
 
 export default function Home() {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
   const handleNewConversation = () => {
-    // TODO: Navigate to create conversation flow (will be implemented in later task)
-    console.log('New conversation clicked');
+    setIsCreateModalOpen(true);
+  };
+
+  const handleConversationCreated = (convoId: string) => {
+    console.log('Conversation created:', convoId);
+    // TODO: Navigate to conversation page in future task
   };
 
   return (
@@ -120,6 +128,13 @@ export default function Home() {
           </div>
         </section>
       </PageContainer>
+
+      {/* Create Conversation Modal */}
+      <CreateConvoModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleConversationCreated}
+      />
     </div>
   );
 }
