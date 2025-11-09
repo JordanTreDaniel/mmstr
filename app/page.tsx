@@ -1,9 +1,114 @@
-import HooksTest from "@/__dev__/components/HooksTest";
+'use client';
+
+import Button from '@/app/components/ui/Button';
+import Card from '@/app/components/ui/Card';
 
 export default function Home() {
+  const handleNewConversation = () => {
+    // TODO: Navigate to create conversation flow (will be implemented in later task)
+    console.log('New conversation clicked');
+  };
+
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <HooksTest />
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Hero Section */}
+        <header className="text-center mb-12 pt-8">
+          <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 dark:text-white mb-4">
+            Make Me Say That&apos;s Right
+          </h1>
+          <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
+            Turn-based discussions that enforce comprehension before rebuttal
+          </p>
+          
+          {/* New Conversation Button */}
+          <div className="flex justify-center">
+            <Button 
+              variant="primary" 
+              size="lg"
+              onClick={handleNewConversation}
+              className="shadow-lg hover:shadow-xl"
+            >
+              New Conversation
+            </Button>
+          </div>
+        </header>
+
+        {/* What is MMSTR Section */}
+        <section className="mb-12">
+          <Card variant="elevated" padding="lg" className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              What is MMSTR?
+            </h2>
+            <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+              &quot;Make Me Say That&apos;s Right&quot; - a negotiation technique by Chris Voss 
+              that supercharges communication
+            </p>
+          </Card>
+        </section>
+
+        {/* How does it work Section */}
+        <section className="mb-12">
+          <Card variant="elevated" padding="lg" className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              How does it work?
+            </h2>
+            <ol className="space-y-4 text-lg text-gray-700 dark:text-gray-300">
+              <li className="flex items-start">
+                <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">1.</span>
+                <span>Someone makes a statement</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">2.</span>
+                <span>You must restate it in your own words</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">3.</span>
+                <span>They confirm you understood correctly</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">4.</span>
+                <span>Only then can you respond</span>
+              </li>
+            </ol>
+          </Card>
+        </section>
+
+        {/* Why does this help Section */}
+        <section className="mb-12">
+          <Card variant="elevated" padding="lg" className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              Why does this help?
+            </h2>
+            <ul className="space-y-3 text-lg text-gray-700 dark:text-gray-300">
+              <li className="flex items-start">
+                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                <span>Ensures clarity (what you said vs what they heard)</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                <span>Prevents looping arguments</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                <span>Blocks strawmanning and misinterpretations</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                <span>Teaches active listening</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                <span>Makes people feel heard</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                <span>Forces proof of understanding</span>
+              </li>
+            </ul>
+          </Card>
+        </section>
+      </div>
     </div>
   );
 }
