@@ -372,7 +372,7 @@ Every task must be **provable** - you should be able to demonstrate it works bef
 
 **✅ GOOD - Easy to prove (external evidence):**
 - "Install langchain package and verify import works" → **Proof**: `import { ChatAnthropic } from 'langchain'` runs without error
-- "Create single API endpoint /api/test and verify it returns 200" → **Proof**: `curl localhost:3000/api/test` returns `{"status": "ok"}`
+- "Create single API endpoint /api/test and verify it returns 200" → **Proof**: `curl localhost:3001/api/test` returns `{"status": "ok"}`
 - "Add one database table and verify it can insert/select one record" → **Proof**: Query returns the inserted test record
 - "Create basic chat component that displays 'Hello World'" → **Proof**: Component renders and shows the text in browser
 
@@ -536,7 +536,7 @@ When given a high-level goal:
 **Creating an API endpoint:**
 - DO: Add route handler for `/api/test`
 - CHECK: Start server and make request
-- PROVE: Show `curl localhost:3000/api/test` returns `{"message": "success"}`
+- PROVE: Show `curl localhost:3001/api/test` returns `{"message": "success"}`
 - DOCUMENT: "Endpoint created and responding correctly"
 - MOVE: Ready to build more complex endpoints
 
