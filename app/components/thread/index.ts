@@ -8,3 +8,6 @@ export type { MessageCardProps } from './MessageCard';
 
 export { MessageList } from './MessageList';
 export type { MessageListProps, MessageWithMetadata } from './MessageList';
+
+export { MessageComposer } from './MessageComposer';
+export type { MessageComposerProps } from './MessageComposer';
