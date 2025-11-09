@@ -2,6 +2,7 @@
 
 import Button from '@/app/components/ui/Button';
 import Card from '@/app/components/ui/Card';
+import { Header, PageContainer } from '@/app/components/layout';
 
 export default function Home() {
   const handleNewConversation = () => {
@@ -11,9 +12,16 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <Header
+        rightContent={
+          <Button variant="ghost" size="sm">
+            Sign In
+          </Button>
+        }
+      />
+      <PageContainer maxWidth="5xl" padding="md">
         {/* Hero Section */}
-        <header className="text-center mb-12 pt-8">
+        <section className="text-center mb-12 pt-8">
           <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 dark:text-white mb-4">
             Make Me Say That&apos;s Right
           </h1>
@@ -32,7 +40,7 @@ export default function Home() {
               New Conversation
             </Button>
           </div>
-        </header>
+        </section>
 
         {/* What is MMSTR Section */}
         <section className="mb-12">
@@ -108,7 +116,7 @@ export default function Home() {
             </ul>
           </Card>
         </section>
-      </div>
+      </PageContainer>
     </div>
   );
 }
