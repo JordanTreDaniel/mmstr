@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Modal from '@/app/components/ui/Modal';
 import Input from '@/app/components/ui/Input';
 import Textarea from '@/app/components/ui/Textarea';
@@ -18,6 +19,7 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const router = useRouter();
   const [title, setTitle] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(20);
   const [maxAttempts, setMaxAttempts] = useState(3);
@@ -46,11 +48,14 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
       setMaxAttempts(3);
       setFirstMessage('');
       
-      // Call success callback
-      onSuccess?.(convo.id);
-      
       // Close modal
       onClose();
+      
+      // Call success callback (for any additional handling)
+      onSuccess?.(convo.id);
+      
+      // Navigate to conversation page
+      router.push(`/conversations/${convo.id}`);
     } catch (error) {
       console.error('Failed to create conversation:', error);
       setTitleError('Failed to create conversation. Please try again.');
