@@ -1,4 +1,4 @@
-import HooksTest from "./components/HooksTest";
+import HooksTest from "@/__dev__/components/HooksTest";
 
 export default function Home() {
   return (

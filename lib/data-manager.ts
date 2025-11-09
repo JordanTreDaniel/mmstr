@@ -2,6 +2,9 @@
  * Data Manager
  * Comprehensive CRUD utilities for all ExplicaMe entities
  * Uses localStorage for persistence with type-safe operations
+ * 
+ * @deprecated This file is deprecated. Use server actions in app/actions/ instead.
+ * This file is kept for reference but should not be used in new code.
  */
 
 import { getItem, setItem } from './storage';

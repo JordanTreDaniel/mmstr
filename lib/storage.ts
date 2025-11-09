@@ -1,6 +1,9 @@
 /**
  * Generic localStorage utility functions with type safety
  * Provides a standardized interface for storing and retrieving data
+ * 
+ * NOTE: This file is still used for user identity (UUID) storage in browser localStorage.
+ * For conversation/message data, use server actions in app/actions/ instead.
  */
 
 /**

@@ -1,33 +1,36 @@
 /**
  * Custom React hook for managing message interpretation flow state
  * Handles interpretations, gradings, responses, and arbitrations
+ * Uses server actions to interact with SQLite database
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
-  createInterpretation,
-  getMessageInterpretations,
-  getUserMessageInterpretations,
-  getUserAttemptCount,
+  createInterpretation as createInterpretationAction,
+  getInterpretationsByMessage,
   getInterpretationById,
-  createInterpretationGrading,
-  getInterpretationGrading,
-  updateGrading,
-  createGradingResponse,
+  createGrading as createGradingAction,
+  getGradingByInterpretation,
+  updateGrading as updateGradingAction,
+  createGradingResponse as createGradingResponseAction,
   getGradingResponse,
-  createArbitration,
-  getInterpretationArbitration,
-  getUserInterpretationStatus,
+  createArbitration as createArbitrationAction,
+  getArbitrationByInterpretation,
+} from '@/app/actions/interpretations';
+import {
   getMessageById,
-  getConvoById,
-  createBreakdown,
-  createPoint,
+} from '@/app/actions/messages';
+import {
+  getConversationById,
+} from '@/app/actions/convos';
+import {
+  createBreakdown as createBreakdownAction,
+  createPoint as createPointAction,
   getMessageBreakdown,
   getBreakdownPoints,
   getInterpretationBreakdown,
-} from '@/lib/data-manager';
+} from '@/app/actions/breakdowns';
 import type {
-  Message,
   Interpretation,
   InterpretationGrading,
   InterpretationGradingResponse,
@@ -56,9 +59,9 @@ export interface UseMessageInteractionsReturn {
   
   // Interpretation actions
   submitInterpretation: (messageId: string, userId: string, text: string) => Promise<Interpretation | null>;
-  getAllInterpretations: (messageId: string) => Interpretation[];
-  getUserInterpretations: (messageId: string, userId: string) => Interpretation[];
-  getAttemptCount: (messageId: string, userId: string) => number;
+  getAllInterpretations: (messageId: string) => Promise<Interpretation[]>;
+  getUserInterpretations: (messageId: string, userId: string) => Promise<Interpretation[]>;
+  getAttemptCount: (messageId: string, userId: string) => Promise<number>;
   
   // Grading actions
   gradeInterpretation: (
@@ -67,14 +70,14 @@ export interface UseMessageInteractionsReturn {
     similarityScore: number,
     autoAcceptSuggested: boolean,
     notes?: string | null
-  ) => InterpretationGrading;
+  ) => Promise<InterpretationGrading>;
   updateInterpretationGrading: (
     gradingId: string,
     updates: Partial<Omit<InterpretationGrading, 'id' | 'interpretationId' | 'createdAt'>>
-  ) => InterpretationGrading | null;
+  ) => Promise<InterpretationGrading | null>;
   
   // Response actions (disputes)
-  submitGradingResponse: (gradingId: string, text: string) => InterpretationGradingResponse;
+  submitGradingResponse: (gradingId: string, text: string) => Promise<InterpretationGradingResponse>;
   
   // Arbitration actions
   submitArbitration: (
@@ -85,14 +88,14 @@ export interface UseMessageInteractionsReturn {
     result: 'accept' | 'reject',
     rulingStatus: string,
     explanation: string
-  ) => Arbitration;
+  ) => Promise<Arbitration>;
   
   // Breakdown actions
-  createMessageBreakdown: (messageId: string, points: string[]) => { breakdown: Breakdown; points: Point[] };
-  createInterpretationBreakdown: (interpretationId: string, points: string[]) => { breakdown: Breakdown; points: Point[] };
+  createMessageBreakdown: (messageId: string, points: string[]) => Promise<{ breakdown: Breakdown; points: Point[] }>;
+  createInterpretationBreakdown: (interpretationId: string, points: string[]) => Promise<{ breakdown: Breakdown; points: Point[] }>;
   
   // Load flow state
-  loadFlowState: (messageId: string, userId: string) => void;
+  loadFlowState: (messageId: string, userId: string) => Promise<void>;
   clearFlowState: () => void;
 }
 
@@ -108,38 +111,55 @@ export function useMessageInteractions(): UseMessageInteractionsReturn {
     userId: string,
     text: string
   ): Promise<Interpretation | null> => {
-    const interpretation = createInterpretation(messageId, userId, text);
-    if (interpretation) {
-      // Reload flow state to reflect new interpretation
-      loadFlowState(messageId, userId);
+    // Get current attempt count
+    const existingInterpretations = await getInterpretationsByMessage(messageId, userId);
+    const attemptNumber = existingInterpretations.length + 1;
+    
+    // Check max attempts
+    const message = await getMessageById(messageId);
+    if (!message) return null;
+    
+    const convo = await getConversationById(message.convoId);
+    if (!convo) return null;
+    
+    if (attemptNumber > convo.maxAttempts) {
+      console.error('Max interpretation attempts exceeded');
+      return null;
     }
+    
+    const interpretation = await createInterpretationAction(messageId, userId, text, attemptNumber);
+    
+    // Reload flow state to reflect new interpretation
+    await loadFlowState(messageId, userId);
+    
     return interpretation;
   }, []);
 
   // Get all interpretations for a message
-  const getAllInterpretations = useCallback((messageId: string): Interpretation[] => {
-    return getMessageInterpretations(messageId);
+  const getAllInterpretations = useCallback(async (messageId: string): Promise<Interpretation[]> => {
+    return await getInterpretationsByMessage(messageId);
   }, []);
 
   // Get user's interpretations for a message
-  const getUserInterpretations = useCallback((messageId: string, userId: string): Interpretation[] => {
-    return getUserMessageInterpretations(messageId, userId);
+  const getUserInterpretations = useCallback(async (messageId: string, userId: string): Promise<Interpretation[]> => {
+    return await getInterpretationsByMessage(messageId, userId);
   }, []);
 
   // Get attempt count
-  const getAttemptCount = useCallback((messageId: string, userId: string): number => {
-    return getUserAttemptCount(messageId, userId);
+  const getAttemptCount = useCallback(async (messageId: string, userId: string): Promise<number> => {
+    const interpretations = await getInterpretationsByMessage(messageId, userId);
+    return interpretations.length;
   }, []);
 
   // Grade an interpretation
-  const gradeInterpretation = useCallback((
+  const gradeInterpretation = useCallback(async (
     interpretationId: string,
     status: 'accepted' | 'rejected',
     similarityScore: number,
     autoAcceptSuggested: boolean,
     notes: string | null = null
-  ): InterpretationGrading => {
-    return createInterpretationGrading(
+  ): Promise<InterpretationGrading> => {
+    return await createGradingAction(
       interpretationId,
       status,
       similarityScore,
@@ -149,23 +169,23 @@ export function useMessageInteractions(): UseMessageInteractionsReturn {
   }, []);
 
   // Update grading
-  const updateInterpretationGrading = useCallback((
+  const updateInterpretationGrading = useCallback(async (
     gradingId: string,
     updates: Partial<Omit<InterpretationGrading, 'id' | 'interpretationId' | 'createdAt'>>
-  ): InterpretationGrading | null => {
-    return updateGrading(gradingId, updates);
+  ): Promise<InterpretationGrading | null> => {
+    return await updateGradingAction(gradingId, updates);
   }, []);
 
   // Submit grading response (dispute)
-  const submitGradingResponse = useCallback((
+  const submitGradingResponse = useCallback(async (
     gradingId: string,
     text: string
-  ): InterpretationGradingResponse => {
-    return createGradingResponse(gradingId, text);
+  ): Promise<InterpretationGradingResponse> => {
+    return await createGradingResponseAction(gradingId, text);
   }, []);
 
   // Submit arbitration
-  const submitArbitration = useCallback((
+  const submitArbitration = useCallback(async (
     messageId: string,
     interpretationId: string,
     gradingId: string,
@@ -173,8 +193,8 @@ export function useMessageInteractions(): UseMessageInteractionsReturn {
     result: 'accept' | 'reject',
     rulingStatus: string,
     explanation: string
-  ): Arbitration => {
-    return createArbitration(
+  ): Promise<Arbitration> => {
+    return await createArbitrationAction(
       messageId,
       interpretationId,
       gradingId,
@@ -186,80 +206,103 @@ export function useMessageInteractions(): UseMessageInteractionsReturn {
   }, []);
 
   // Create message breakdown
-  const createMessageBreakdown = useCallback((
+  const createMessageBreakdown = useCallback(async (
     messageId: string,
     points: string[]
-  ): { breakdown: Breakdown; points: Point[] } => {
-    const breakdown = createBreakdown(messageId, null);
-    const createdPoints = points.map((text, index) => 
-      createPoint(breakdown.id, text, index + 1)
-    );
+  ): Promise<{ breakdown: Breakdown; points: Point[] }> => {
+    const breakdown = await createBreakdownAction(messageId, null);
+    const createdPoints: Point[] = [];
+    
+    for (let i = 0; i < points.length; i++) {
+      const point = await createPointAction(breakdown.id, points[i], i + 1);
+      createdPoints.push(point);
+    }
     
     return { breakdown, points: createdPoints };
   }, []);
 
   // Create interpretation breakdown
-  const createInterpretationBreakdown = useCallback((
+  const createInterpretationBreakdown = useCallback(async (
     interpretationId: string,
     points: string[]
-  ): { breakdown: Breakdown; points: Point[] } => {
-    const breakdown = createBreakdown(null, interpretationId);
-    const createdPoints = points.map((text, index) => 
-      createPoint(breakdown.id, text, index + 1)
-    );
+  ): Promise<{ breakdown: Breakdown; points: Point[] }> => {
+    const breakdown = await createBreakdownAction(null, interpretationId);
+    const createdPoints: Point[] = [];
+    
+    for (let i = 0; i < points.length; i++) {
+      const point = await createPointAction(breakdown.id, points[i], i + 1);
+      createdPoints.push(point);
+    }
     
     return { breakdown, points: createdPoints };
   }, []);
 
   // Load flow state for a message and user
-  const loadFlowState = useCallback((messageId: string, userId: string) => {
-    const status = getUserInterpretationStatus(messageId, userId);
-    const message = getMessageById(messageId);
-    
-    if (!message) {
-      setFlowState(null);
-      return;
-    }
+  const loadFlowState = useCallback(async (messageId: string, userId: string) => {
+    try {
+      const message = await getMessageById(messageId);
+      
+      if (!message) {
+        setFlowState(null);
+        return;
+      }
 
-    const messageBreakdown = getMessageBreakdown(messageId);
-    const messagePoints = messageBreakdown ? getBreakdownPoints(messageBreakdown.id) : [];
+      const messageBreakdown = await getMessageBreakdown(messageId);
+      const messagePoints = messageBreakdown ? await getBreakdownPoints(messageBreakdown.id) : [];
 
-    if (!status) {
-      // No interpretations yet
-      const convo = getConvoById(message.convoId);
+      // Get user's interpretations
+      const interpretations = await getInterpretationsByMessage(messageId, userId);
+      
+      if (interpretations.length === 0) {
+        // No interpretations yet
+        const convo = await getConversationById(message.convoId);
+        setFlowState({
+          interpretation: null,
+          grading: null,
+          response: null,
+          arbitration: null,
+          attemptNumber: 0,
+          maxAttempts: convo?.maxAttempts || 3,
+          canRetry: true,
+          messageBreakdown,
+          messagePoints,
+          interpretationBreakdown: null,
+          interpretationPoints: [],
+        });
+        return;
+      }
+
+      // Get the latest interpretation
+      const latestInterpretation = interpretations[0]; // Already sorted by attempt_number DESC
+      const grading = await getGradingByInterpretation(latestInterpretation.id);
+      const response = grading ? await getGradingResponse(grading.id) : null;
+      const arbitration = await getArbitrationByInterpretation(latestInterpretation.id);
+      
+      const interpretationBreakdown = await getInterpretationBreakdown(latestInterpretation.id);
+      const interpretationPoints = interpretationBreakdown ? 
+        await getBreakdownPoints(interpretationBreakdown.id) : [];
+
+      const convo = await getConversationById(message.convoId);
+      const maxAttempts = convo?.maxAttempts || 3;
+      const canRetry = latestInterpretation.attemptNumber < maxAttempts;
+
       setFlowState({
-        interpretation: null,
-        grading: null,
-        response: null,
-        arbitration: null,
-        attemptNumber: 0,
-        maxAttempts: convo?.maxAttempts || 3,
-        canRetry: true,
+        interpretation: latestInterpretation,
+        grading,
+        response,
+        arbitration,
+        attemptNumber: latestInterpretation.attemptNumber,
+        maxAttempts,
+        canRetry,
         messageBreakdown,
         messagePoints,
-        interpretationBreakdown: null,
-        interpretationPoints: [],
+        interpretationBreakdown,
+        interpretationPoints,
       });
-      return;
+    } catch (error) {
+      console.error('Error loading flow state:', error);
+      setFlowState(null);
     }
-
-    const interpretationBreakdown = getInterpretationBreakdown(status.interpretation.id);
-    const interpretationPoints = interpretationBreakdown ? 
-      getBreakdownPoints(interpretationBreakdown.id) : [];
-
-    setFlowState({
-      interpretation: status.interpretation,
-      grading: status.grading || null,
-      response: status.grading ? getGradingResponse(status.grading.id) : null,
-      arbitration: status.arbitration || null,
-      attemptNumber: status.attemptNumber,
-      maxAttempts: status.maxAttempts,
-      canRetry: status.canRetry,
-      messageBreakdown,
-      messagePoints,
-      interpretationBreakdown,
-      interpretationPoints,
-    });
   }, []);
 
   // Clear flow state

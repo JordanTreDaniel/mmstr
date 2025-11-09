@@ -1,58 +1,62 @@
 /**
  * Custom React hook for managing conversations
  * Handles CRUD operations for conversations, participations, and messages
+ * Uses server actions to interact with SQLite database
  */
 
 import { useState, useCallback, useEffect } from 'react';
 import { useLocalStorage } from './use-local-storage';
-import { STORAGE_KEYS } from '@/lib/storage-keys';
 import {
-  getAllConvos,
-  createConvo as createConvoData,
-  getConvoById,
-  updateConvo as updateConvoData,
-  deleteConvo as deleteConvoData,
-  getConvoMessages,
-  getConvoParticipations,
+  getConversations,
+  createConversation as createConvoAction,
+  getConversationById,
+  updateConversation as updateConvoAction,
+  deleteConversation as deleteConvoAction,
+} from '@/app/actions/convos';
+import {
+  createMessage as createMessageAction,
+  getConversationMessages,
+} from '@/app/actions/messages';
+import {
   addParticipation,
   removeParticipation,
+  getConversationParticipants,
   isUserParticipating,
-  createMessage,
-  initializeDataStructures,
-} from '@/lib/data-manager';
+} from '@/app/actions/participations';
 import type { Convo, Message, Participation } from '@/types/entities';
 
 export interface UseConversationsReturn {
   // Conversations
   conversations: Convo[];
   currentConvo: Convo | null;
+  loading: boolean;
   
   // Actions
-  createConversation: (title: string, maxAttempts?: number, participantLimit?: number) => Convo;
-  getConversation: (id: string) => Convo | null;
-  updateConversation: (id: string, updates: Partial<Omit<Convo, 'id' | 'createdAt'>>) => Convo | null;
-  deleteConversation: (id: string) => boolean;
+  createConversation: (title: string, maxAttempts?: number, participantLimit?: number) => Promise<Convo>;
+  getConversation: (id: string) => Promise<Convo | null>;
+  updateConversation: (id: string, updates: Partial<Omit<Convo, 'id' | 'createdAt'>>) => Promise<Convo | null>;
+  deleteConversation: (id: string) => Promise<boolean>;
   setCurrentConvo: (convoId: string | null) => void;
   
   // Messages
-  getMessages: (convoId: string) => Message[];
-  addMessage: (text: string, userId: string, convoId: string, replyingToMessageId?: string | null) => Message | null;
+  getMessages: (convoId: string) => Promise<Message[]>;
+  addMessage: (text: string, userId: string, convoId: string, replyingToMessageId?: string | null) => Promise<Message | null>;
   
   // Participations
-  joinConversation: (userId: string, convoId: string) => boolean;
-  leaveConversation: (userId: string, convoId: string) => boolean;
-  getParticipants: (convoId: string) => Participation[];
-  checkParticipation: (userId: string, convoId: string) => boolean;
+  joinConversation: (userId: string, convoId: string) => Promise<boolean>;
+  leaveConversation: (userId: string, convoId: string) => Promise<boolean>;
+  getParticipants: (convoId: string) => Promise<Participation[]>;
+  checkParticipation: (userId: string, convoId: string) => Promise<boolean>;
   
   // Refresh
-  refresh: () => void;
+  refresh: () => Promise<void>;
 }
 
 /**
  * Hook for managing all conversation-related data
  */
 export function useConversations(): UseConversationsReturn {
-  // Track current conversation ID in localStorage
+  // Track current conversation ID in localStorage (browser preference)
   const [currentConvoId, setCurrentConvoId] = useLocalStorage<string | null>(
     'explicame:current_convo_id',
     null
@@ -61,53 +65,69 @@ export function useConversations(): UseConversationsReturn {
   // Local state for conversations list
   const [conversations, setConversations] = useState<Convo[]>([]);
   const [currentConvo, setCurrentConvo] = useState<Convo | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Initialize data structures on mount
+  // Load conversations from database on mount
   useEffect(() => {
-    initializeDataStructures();
     loadConversations();
   }, []);
 
   // Load current conversation when currentConvoId changes
   useEffect(() => {
     if (currentConvoId) {
-      const convo = getConvoById(currentConvoId);
-      setCurrentConvo(convo);
+      loadCurrentConvo(currentConvoId);
     } else {
       setCurrentConvo(null);
     }
   }, [currentConvoId]);
 
-  // Load conversations from localStorage
-  const loadConversations = useCallback(() => {
-    const convos = getAllConvos();
-    setConversations(convos);
+  // Load conversations from database
+  const loadConversations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const convos = await getConversations();
+      setConversations(convos);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Load current conversation
+  const loadCurrentConvo = useCallback(async (id: string) => {
+    try {
+      const convo = await getConversationById(id);
+      setCurrentConvo(convo);
+    } catch (error) {
+      console.error('Error loading current conversation:', error);
+    }
   }, []);
 
   // Create a new conversation
-  const createConversation = useCallback((
+  const createConversation = useCallback(async (
     title: string,
     maxAttempts: number = 3,
     participantLimit: number = 20
-  ): Convo => {
-    const convo = createConvoData(title, maxAttempts, participantLimit);
-    loadConversations();
+  ): Promise<Convo> => {
+    const convo = await createConvoAction(title, maxAttempts, participantLimit);
+    await loadConversations();
     return convo;
   }, [loadConversations]);
 
   // Get conversation by ID
-  const getConversation = useCallback((id: string): Convo | null => {
-    return getConvoById(id);
+  const getConversation = useCallback(async (id: string): Promise<Convo | null> => {
+    return await getConversationById(id);
   }, []);
 
   // Update conversation
-  const updateConversation = useCallback((
+  const updateConversation = useCallback(async (
     id: string,
     updates: Partial<Omit<Convo, 'id' | 'createdAt'>>
-  ): Convo | null => {
-    const updated = updateConvoData(id, updates);
+  ): Promise<Convo | null> => {
+    const updated = await updateConvoAction(id, updates);
     if (updated) {
-      loadConversations();
+      await loadConversations();
       if (currentConvoId === id) {
         setCurrentConvo(updated);
       }
@@ -116,10 +136,10 @@ export function useConversations(): UseConversationsReturn {
   }, [loadConversations, currentConvoId]);
 
   // Delete conversation
-  const deleteConversation = useCallback((id: string): boolean => {
-    const success = deleteConvoData(id);
+  const deleteConversation = useCallback(async (id: string): Promise<boolean> => {
+    const success = await deleteConvoAction(id);
     if (success) {
-      loadConversations();
+      await loadConversations();
       if (currentConvoId === id) {
         setCurrentConvoId(null);
       }
@@ -133,53 +153,52 @@ export function useConversations(): UseConversationsReturn {
   }, [setCurrentConvoId]);
 
   // Get messages for a conversation
-  const getMessages = useCallback((convoId: string): Message[] => {
-    return getConvoMessages(convoId);
+  const getMessages = useCallback(async (convoId: string): Promise<Message[]> => {
+    return await getConversationMessages(convoId);
   }, []);
 
   // Add a message to a conversation
-  const addMessage = useCallback((
+  const addMessage = useCallback(async (
     text: string,
     userId: string,
     convoId: string,
     replyingToMessageId: string | null = null
-  ): Message | null => {
-    return createMessage(text, userId, convoId, replyingToMessageId);
+  ): Promise<Message | null> => {
+    return await createMessageAction(text, userId, convoId, replyingToMessageId);
   }, []);
 
   // Join a conversation
-  const joinConversation = useCallback((userId: string, convoId: string): boolean => {
-    const participation = addParticipation(userId, convoId);
-    return participation !== null;
+  const joinConversation = useCallback(async (userId: string, convoId: string): Promise<boolean> => {
+    return await addParticipation(userId, convoId);
   }, []);
 
   // Leave a conversation
-  const leaveConversation = useCallback((userId: string, convoId: string): boolean => {
-    return removeParticipation(userId, convoId);
+  const leaveConversation = useCallback(async (userId: string, convoId: string): Promise<boolean> => {
+    return await removeParticipation(userId, convoId);
   }, []);
 
   // Get participants of a conversation
-  const getParticipants = useCallback((convoId: string): Participation[] => {
-    return getConvoParticipations(convoId);
+  const getParticipants = useCallback(async (convoId: string): Promise<Participation[]> => {
+    return await getConversationParticipants(convoId);
   }, []);
 
   // Check if user is participating
-  const checkParticipation = useCallback((userId: string, convoId: string): boolean => {
-    return isUserParticipating(userId, convoId);
+  const checkParticipation = useCallback(async (userId: string, convoId: string): Promise<boolean> => {
+    return await isUserParticipating(userId, convoId);
   }, []);
 
   // Refresh all data
-  const refresh = useCallback(() => {
-    loadConversations();
+  const refresh = useCallback(async () => {
+    await loadConversations();
     if (currentConvoId) {
-      const convo = getConvoById(currentConvoId);
-      setCurrentConvo(convo);
+      await loadCurrentConvo(currentConvoId);
     }
-  }, [loadConversations, currentConvoId]);
+  }, [loadConversations, loadCurrentConvo, currentConvoId]);
 
   return {
     conversations,
     currentConvo,
+    loading,
     createConversation,
     getConversation,
     updateConversation,

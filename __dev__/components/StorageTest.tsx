@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { runStorageTests } from '@/lib/__test-storage__';
+import { runStorageTests } from '@/__dev__/utils/test-storage';
 
 /**
  * Component to test storage utilities

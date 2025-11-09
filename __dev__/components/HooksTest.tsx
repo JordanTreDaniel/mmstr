@@ -5,11 +5,12 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocalStorage } from '@/hooks/use-local-storage';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { useConversations } from '@/hooks/use-conversations';
 import { useMessageInteractions } from '@/hooks/use-message-interactions';
+import type { Message, Participation } from '@/types/entities';
 
 export default function HooksTest() {
   // Test useLocalStorage
@@ -51,9 +52,29 @@ export default function HooksTest() {
   const [interpretationText, setInterpretationText] = useState('');
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
 
-  // Get current conversation messages
-  const currentMessages = currentConvo ? getMessages(currentConvo.id) : [];
-  const currentParticipants = currentConvo ? getParticipants(currentConvo.id) : [];
+  // State for current conversation data
+  const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
+  const [currentParticipants, setCurrentParticipants] = useState<Participation[]>([]);
+
+  // Load messages and participants when currentConvo changes
+  useEffect(() => {
+    if (currentConvo) {
+      loadConversationData();
+    } else {
+      setCurrentMessages([]);
+      setCurrentParticipants([]);
+    }
+  }, [currentConvo]);
+
+  const loadConversationData = async () => {
+    if (!currentConvo) return;
+    
+    const messages = await getMessages(currentConvo.id);
+    const participants = await getParticipants(currentConvo.id);
+    
+    setCurrentMessages(messages);
+    setCurrentParticipants(participants);
+  };
 
   // Handlers
   const handleCreateUser = () => {
@@ -63,27 +84,29 @@ export default function HooksTest() {
     }
   };
 
-  const handleCreateConvo = () => {
+  const handleCreateConvo = async () => {
     if (convoTitle.trim()) {
-      const convo = createConversation(convoTitle.trim());
+      const convo = await createConversation(convoTitle.trim());
       setCurrentConvo(convo.id);
       if (currentUser) {
-        joinConversation(currentUser.id, convo.id);
+        await joinConversation(currentUser.id, convo.id);
       }
       setConvoTitle('');
     }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (messageText.trim() && currentUser && currentConvo) {
-      const message = addMessage(messageText.trim(), currentUser.id, currentConvo.id);
+      const message = await addMessage(messageText.trim(), currentUser.id, currentConvo.id);
       if (message) {
         // Create breakdown for the message
-        createMessageBreakdown(message.id, [
+        await createMessageBreakdown(message.id, [
           'Point 1: First assertion',
           'Point 2: Second assertion',
           'Point 3: Third assertion',
         ]);
+        // Reload messages
+        await loadConversationData();
       }
       setMessageText('');
     }
@@ -100,7 +123,7 @@ export default function HooksTest() {
       if (interpretation) {
         // Auto-grade with a random score for testing
         const score = Math.floor(Math.random() * 30) + 70; // 70-100
-        gradeInterpretation(
+        await gradeInterpretation(
           interpretation.id,
           score >= 85 ? 'accepted' : 'rejected',
           score,
@@ -109,17 +132,17 @@ export default function HooksTest() {
         );
         
         // Reload flow state
-        loadFlowState(selectedMessageId, currentUser.id);
+        await loadFlowState(selectedMessageId, currentUser.id);
       }
       
       setInterpretationText('');
     }
   };
 
-  const handleLoadFlowState = (messageId: string) => {
+  const handleLoadFlowState = async (messageId: string) => {
     if (currentUser) {
       setSelectedMessageId(messageId);
-      loadFlowState(messageId, currentUser.id);
+      await loadFlowState(messageId, currentUser.id);
     }
   };
 
@@ -221,7 +244,7 @@ export default function HooksTest() {
                 >
                   <p className="font-medium">{convo.title}</p>
                   <p className="text-sm text-gray-600">
-                    Max Attempts: {convo.maxAttempts} | Participants: {getParticipants(convo.id).length}/{convo.participantLimit}
+                    Max Attempts: {convo.maxAttempts} | Participants: {currentConvo?.id === convo.id ? currentParticipants.length : '?'}/{convo.participantLimit}
                   </p>
                 </div>
               ))}

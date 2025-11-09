@@ -4,8 +4,8 @@
  * Run this in the browser console or in a component mount
  */
 
-import { getItem, setItem, removeItem, clear, hasKey, getAllKeys } from './storage';
-import { STORAGE_KEYS } from './storage-keys';
+import { getItem, setItem, removeItem, clear, hasKey, getAllKeys } from '@/lib/storage';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
 
 interface TestConvo {
   id: string;
