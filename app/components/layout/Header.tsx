@@ -17,7 +17,7 @@ export interface HeaderProps {
    */
   rightContent?: React.ReactNode;
   /**
-   * Custom logo content (defaults to "ExplicaMe")
+   * Custom logo content (defaults to "MMSTR")
    */
   logo?: React.ReactNode;
 }
@@ -26,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({
   showBackButton = false,
   onBackClick,
   rightContent,
-  logo = 'ExplicaMe',
+  logo = 'MMSTR',
 }) => {
   return (
     <header className="w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">

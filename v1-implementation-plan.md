@@ -1,4 +1,4 @@
-# ExplicaMe v1 Implementation Plan
+# MMSTR v1 Implementation Plan
 
 Root Goal: Build a full-stack Next.js web app that enforces comprehension before rebuttal in turn-based discussions, using in-memory state with localStorage persistence and mocked AI features.
 
@@ -91,11 +91,11 @@ This plan follows a preparation-first approach: set up infrastructure, create fo
 ## Phase 3: Landing Page and Navigation
 
 - [ ] 3.1: Create landing page layout
-- [ ] 3.1.1: Create app/page.tsx with hero section and ExplicaMe title
+- [ ] 3.1.1: Create app/page.tsx with hero section and MMSTR title
 - [ ] 3.1.2: Add New Conversation button that navigates to create flow
 - [ ] 3.1.3: Add What is MMSTR section with explanation cards
 - [ ] 3.1.4: Add How does it work section with 4-step process
-- [ ] 3.1.5: Add Why does this help section with 6 benefits list
+- [ ] 3.1.5: Add How does MMSTR help? section with 6 benefits list
 - [ ] 3.1.6: Style landing page with Tailwind following wireframes layout
 - [ ] 3.1.7: Verify landing page displays correctly and button is clickable
 - [ ] 3.2: Create navigation and layout components

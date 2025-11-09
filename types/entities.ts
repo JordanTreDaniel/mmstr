@@ -1,8 +1,8 @@
-// ExplicaMe - Data Entity Type Definitions
+// MMSTR - Data Entity Type Definitions
 
 /**
  * User entity
- * Represents a participant in the ExplicaMe discussion platform
+ * Represents a participant in the MMSTR discussion platform
  */
 export interface User {
   id: string;

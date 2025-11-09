@@ -34,7 +34,7 @@ export function useCurrentUser(): UseCurrentUserReturn {
 
   // Store all users in localStorage
   const [allUsers, setAllUsers] = useLocalStorage<User[]>(
-    'explicame:users',
+    'mmstr:users',
     []
   );
 

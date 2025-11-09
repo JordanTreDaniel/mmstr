@@ -1,6 +1,6 @@
 # Custom React Hooks
 
-This directory contains custom React hooks for state management in the ExplicaMe application.
+This directory contains custom React hooks for state management in the MMSTR application.
 
 ## Available Hooks
 

@@ -1,9 +1,9 @@
-# ExplicaMe - ASCII Wireframes
+# MMSTR - ASCII Wireframes
 
 ## 1. Landing Page
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│  [ExplicaMe Logo]                                   [Sign In]  │
+│  [MMSTR Logo]                                   [Sign In]  │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
 │                   Make Me Say That's Right                     │
@@ -29,7 +29,7 @@
 │  └──────────────────────────────────────────────────────────┘ │
 │                                                                │
 │  ┌──────────────────────────────────────────────────────────┐ │
-│  │ Why does this help?                                      │ │
+│  │ How does MMSTR help??                                      │ │
 │  │ ✓ Ensures clarity (what you said vs what they heard)    │ │
 │  │ ✓ Prevents looping arguments                             │ │
 │  │ ✓ Blocks strawmanning and misinterpretations            │ │

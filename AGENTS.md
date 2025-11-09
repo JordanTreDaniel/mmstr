@@ -1,4 +1,4 @@
-# ExplicaMe - Agent Instructions
+# MMSTR - Agent Instructions
 
 ## Architecture
 

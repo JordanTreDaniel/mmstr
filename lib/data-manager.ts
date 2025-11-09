@@ -1,6 +1,6 @@
 /**
  * Data Manager
- * Comprehensive CRUD utilities for all ExplicaMe entities
+ * Comprehensive CRUD utilities for all MMSTR entities
  * Uses localStorage for persistence with type-safe operations
  * 
  * @deprecated This file is deprecated. Use server actions in app/actions/ instead.

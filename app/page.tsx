@@ -37,7 +37,7 @@ export default function Home() {
               onClick={handleNewConversation}
               className="shadow-lg hover:shadow-xl"
             >
-              New Conversation
+              Start Discussing
             </Button>
           </div>
         </section>
@@ -55,66 +55,69 @@ export default function Home() {
           </Card>
         </section>
 
-        {/* How does it work Section */}
-        <section className="mb-12">
-          <Card variant="elevated" padding="lg" className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-              How does it work?
-            </h2>
-            <ol className="space-y-4 text-lg text-gray-700 dark:text-gray-300">
-              <li className="flex items-start">
-                <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">1.</span>
-                <span>Someone makes a statement</span>
-              </li>
-              <li className="flex items-start">
-                <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">2.</span>
-                <span>You must restate it in your own words</span>
-              </li>
-              <li className="flex items-start">
-                <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">3.</span>
-                <span>They confirm you understood correctly</span>
-              </li>
-              <li className="flex items-start">
-                <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">4.</span>
-                <span>Only then can you respond</span>
-              </li>
-            </ol>
-          </Card>
-        </section>
+        {/* How It Works + Benefits - Side by side on wide, stacked on mobile */}
+        <section className="mb-12 flex flex-col lg:flex-row gap-6 lg:gap-8">
+          {/* How does MMSTR help? - First on mobile, right on desktop */}
+          <div className="flex-1 lg:order-2">
+            <Card variant="elevated" padding="lg" className="h-full">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                How does MMSTR help??
+              </h2>
+              <ul className="space-y-3 text-lg text-gray-700 dark:text-gray-300">
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Ensures clarity (what you said vs what they heard)</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Prevents looping arguments</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Blocks strawmanning and misinterpretations</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Teaches active listening</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Makes people feel heard</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Forces proof of understanding</span>
+                </li>
+              </ul>
+            </Card>
+          </div>
 
-        {/* Why does this help Section */}
-        <section className="mb-12">
-          <Card variant="elevated" padding="lg" className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-              Why does this help?
-            </h2>
-            <ul className="space-y-3 text-lg text-gray-700 dark:text-gray-300">
-              <li className="flex items-start">
-                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                <span>Ensures clarity (what you said vs what they heard)</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                <span>Prevents looping arguments</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                <span>Blocks strawmanning and misinterpretations</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                <span>Teaches active listening</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                <span>Makes people feel heard</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                <span>Forces proof of understanding</span>
-              </li>
-            </ul>
-          </Card>
+          {/* How does it work - Second on mobile, left on desktop */}
+          <div className="flex-1 lg:order-1">
+            <Card variant="elevated" padding="lg" className="h-full">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                How does it work?
+              </h2>
+              <ol className="space-y-4 text-lg text-gray-700 dark:text-gray-300">
+                <li className="flex items-start">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">1.</span>
+                  <span>Someone makes a statement</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">2.</span>
+                  <span>You must restate it in your own words</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">3.</span>
+                  <span>They confirm you understood correctly</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">4.</span>
+                  <span>Only then can you respond</span>
+                </li>
+              </ol>
+            </Card>
+          </div>
         </section>
       </PageContainer>
     </div>

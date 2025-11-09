@@ -6,40 +6,40 @@
 // Core data storage keys
 export const STORAGE_KEYS = {
   // Conversations
-  CONVOS: 'explicame:convos',
+  CONVOS: 'mmstr:convos',
   
   // Participations (user-convo relationships)
-  PARTICIPATIONS: 'explicame:participations',
+  PARTICIPATIONS: 'mmstr:participations',
   
   // Messages
-  MESSAGES: 'explicame:messages',
+  MESSAGES: 'mmstr:messages',
   
   // Breakdowns (AI-generated point breakdowns)
-  BREAKDOWNS: 'explicame:breakdowns',
+  BREAKDOWNS: 'mmstr:breakdowns',
   
   // Points (individual points within a breakdown)
-  POINTS: 'explicame:points',
+  POINTS: 'mmstr:points',
   
   // Interpretations (user attempts to restate messages)
-  INTERPRETATIONS: 'explicame:interpretations',
+  INTERPRETATIONS: 'mmstr:interpretations',
   
   // Interpretation Gradings (author's evaluation of interpretations)
-  INTERPRETATION_GRADINGS: 'explicame:interpretation_gradings',
+  INTERPRETATION_GRADINGS: 'mmstr:interpretation_gradings',
   
   // Interpretation Grading Responses (replier's response to rejection)
-  INTERPRETATION_GRADING_RESPONSES: 'explicame:interpretation_grading_responses',
+  INTERPRETATION_GRADING_RESPONSES: 'mmstr:interpretation_grading_responses',
   
   // Arbitrations (AI judgments when disputes occur)
-  ARBITRATIONS: 'explicame:arbitrations',
+  ARBITRATIONS: 'mmstr:arbitrations',
   
   // User settings
-  USER_SETTINGS: 'explicame:user_settings',
+  USER_SETTINGS: 'mmstr:user_settings',
   
   // Current user ID (for MVP, simple user tracking)
-  CURRENT_USER_ID: 'explicame:current_user_id',
+  CURRENT_USER_ID: 'mmstr:current_user_id',
   
   // ID counters for generating unique IDs
-  ID_COUNTERS: 'explicame:id_counters',
+  ID_COUNTERS: 'mmstr:id_counters',
 } as const;
 
 // Type-safe keys

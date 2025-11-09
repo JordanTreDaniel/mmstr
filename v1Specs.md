@@ -1,6 +1,6 @@
-# ExplicaMe - Updated Spec v2
+# MMSTR - Updated Spec v2
 
-Build a full-stack web app called **"ExplicaMe"** based on **"Make Me Say That's Right"** by Chris Voss. It is a turn-based discussion tool that enforces comprehension before rebuttal.
+Build a full-stack web app called **"MMSTR"** based on **"Make Me Say That's Right"** by Chris Voss. It is a turn-based discussion tool that enforces comprehension before rebuttal.
 
 ## Tech Stack (MVP):
 - **Frontend**: Next.js + React + Tailwind CSS

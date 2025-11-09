@@ -58,7 +58,7 @@ export interface UseConversationsReturn {
 export function useConversations(): UseConversationsReturn {
   // Track current conversation ID in localStorage (browser preference)
   const [currentConvoId, setCurrentConvoId] = useLocalStorage<string | null>(
-    'explicame:current_convo_id',
+    'mmstr:current_convo_id',
     null
   );
   
