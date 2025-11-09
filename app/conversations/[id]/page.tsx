@@ -8,44 +8,50 @@ import { Header, PageContainer } from '@/app/components/layout';
 import Card from '@/app/components/ui/Card';
 import Button from '@/app/components/ui/Button';
 import ConversationWelcomeModal from '@/app/components/modals/ConversationWelcomeModal';
+import type { Convo } from '@/types/entities';
 
 interface ConversationPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function ConversationPage({ params }: ConversationPageProps) {
-  const { id } = params;
+  const [id, setId] = useState<string | null>(null);
   const router = useRouter();
   const { currentUser } = useCurrentUser();
   const { 
-    currentConvo, 
-    setCurrentConvo, 
     getConversation,
     joinConversation,
     checkParticipation 
   } = useConversations();
   
+  const [convo, setConvo] = useState<Convo | null>(null);
   const [loading, setLoading] = useState(true);
   const [isParticipant, setIsParticipant] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [isNewConvo, setIsNewConvo] = useState(false);
 
+  // Unwrap params promise (Next.js 15+)
   useEffect(() => {
+    params.then((p) => setId(p.id));
+  }, [params]);
+
+  useEffect(() => {
+    if (!id) return;
+    
     const loadConversation = async () => {
       setLoading(true);
       try {
-        // Set as current conversation
-        setCurrentConvo(id);
-        
         // Load conversation details
-        const convo = await getConversation(id);
-        if (!convo) {
+        const loadedConvo = await getConversation(id);
+        if (!loadedConvo) {
           // Conversation not found
           router.push('/');
           return;
         }
+        
+        setConvo(loadedConvo);
 
         // Check if user is a participant
         if (currentUser) {
@@ -68,7 +74,8 @@ export default function ConversationPage({ params }: ConversationPageProps) {
     };
 
     loadConversation();
-  }, [id, currentUser, setCurrentConvo, getConversation, checkParticipation, joinConversation, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, currentUser?.id]);
 
   if (loading) {
     return (
@@ -86,7 +93,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
     );
   }
 
-  if (!currentConvo) {
+  if (!convo) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
         <Header />
@@ -114,10 +121,10 @@ export default function ConversationPage({ params }: ConversationPageProps) {
         <Card variant="elevated" padding="lg" className="max-w-4xl mx-auto mt-8">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              {currentConvo.title}
+              {convo.title}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Created {new Date(currentConvo.createdAt).toLocaleString()}
+              Created {new Date(convo.createdAt).toLocaleString()}
             </p>
           </div>
 
@@ -127,8 +134,8 @@ export default function ConversationPage({ params }: ConversationPageProps) {
                 Conversation Settings
               </h3>
               <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                <li>Max Participants: {currentConvo.participantLimit}</li>
-                <li>Max Interpretation Attempts: {currentConvo.maxAttempts}</li>
+                <li>Max Participants: {convo.participantLimit}</li>
+                <li>Max Interpretation Attempts: {convo.maxAttempts}</li>
               </ul>
             </div>
 
@@ -142,12 +149,12 @@ export default function ConversationPage({ params }: ConversationPageProps) {
       </PageContainer>
 
       {/* Welcome Modal */}
-      {showWelcome && (
+      {showWelcome && id && (
         <ConversationWelcomeModal
           isOpen={showWelcome}
           onClose={() => setShowWelcome(false)}
           conversationId={id}
-          conversationTitle={currentConvo.title}
+          conversationTitle={convo.title}
           isCreator={isNewConvo}
         />
       )}

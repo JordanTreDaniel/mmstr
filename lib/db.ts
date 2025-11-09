@@ -16,6 +16,7 @@ export const client = createClient({
  * Creates all required tables if they don't exist
  */
 export async function initializeDatabase() {
+  // Execute each CREATE TABLE statement separately
   await client.execute(`
     CREATE TABLE IF NOT EXISTS convos (
       id TEXT PRIMARY KEY,
@@ -23,8 +24,10 @@ export async function initializeDatabase() {
       created_at TEXT NOT NULL,
       max_attempts INTEGER DEFAULT 3,
       participant_limit INTEGER DEFAULT 20
-    );
+    )
+  `);
 
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS messages (
       id TEXT PRIMARY KEY,
       text TEXT NOT NULL,
@@ -33,23 +36,29 @@ export async function initializeDatabase() {
       replying_to_message_id TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY (convo_id) REFERENCES convos(id)
-    );
+    )
+  `);
 
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS breakdowns (
       id TEXT PRIMARY KEY,
       message_id TEXT,
       interpretation_id TEXT,
       created_at TEXT NOT NULL
-    );
+    )
+  `);
 
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS points (
       id TEXT PRIMARY KEY,
       breakdown_id TEXT NOT NULL,
       text TEXT NOT NULL,
       "order" INTEGER NOT NULL,
       FOREIGN KEY (breakdown_id) REFERENCES breakdowns(id)
-    );
+    )
+  `);
 
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS interpretations (
       id TEXT PRIMARY KEY,
       message_id TEXT NOT NULL,
@@ -58,8 +67,10 @@ export async function initializeDatabase() {
       attempt_number INTEGER NOT NULL,
       created_at TEXT NOT NULL,
       FOREIGN KEY (message_id) REFERENCES messages(id)
-    );
+    )
+  `);
 
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS interpretation_gradings (
       id TEXT PRIMARY KEY,
       interpretation_id TEXT NOT NULL,
@@ -69,16 +80,20 @@ export async function initializeDatabase() {
       notes TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY (interpretation_id) REFERENCES interpretations(id)
-    );
+    )
+  `);
 
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS interpretation_grading_responses (
       id TEXT PRIMARY KEY,
       interpretation_grading_id TEXT NOT NULL,
       text TEXT NOT NULL,
       created_at TEXT NOT NULL,
       FOREIGN KEY (interpretation_grading_id) REFERENCES interpretation_gradings(id)
-    );
+    )
+  `);
 
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS arbitrations (
       id TEXT PRIMARY KEY,
       message_id TEXT NOT NULL,
@@ -91,14 +106,16 @@ export async function initializeDatabase() {
       created_at TEXT NOT NULL,
       FOREIGN KEY (message_id) REFERENCES messages(id),
       FOREIGN KEY (interpretation_id) REFERENCES interpretations(id)
-    );
+    )
+  `);
 
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS participations (
       user_id TEXT NOT NULL,
       convo_id TEXT NOT NULL,
       PRIMARY KEY (user_id, convo_id),
       FOREIGN KEY (convo_id) REFERENCES convos(id)
-    );
+    )
   `);
 }
 

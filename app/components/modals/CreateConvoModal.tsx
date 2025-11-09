@@ -7,6 +7,8 @@ import Input from '@/app/components/ui/Input';
 import Textarea from '@/app/components/ui/Textarea';
 import Button from '@/app/components/ui/Button';
 import { createConversation } from '@/app/actions/convos';
+import { createMessage } from '@/app/actions/messages';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 export interface CreateConvoModalProps {
   isOpen: boolean;
@@ -20,6 +22,7 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
   onSuccess,
 }) => {
   const router = useRouter();
+  const { currentUser } = useCurrentUser();
   const [title, setTitle] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(20);
   const [maxAttempts, setMaxAttempts] = useState(3);
@@ -35,12 +38,25 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
       setTitleError('Title is required');
       return;
     }
+
+    // Ensure we have a current user
+    if (!currentUser) {
+      setTitleError('User not initialized. Please refresh the page.');
+      return;
+    }
     
     setTitleError('');
     setIsSubmitting(true);
 
     try {
+      // Create the conversation
       const convo = await createConversation(title.trim(), maxAttempts, maxParticipants);
+
+      // Create the first message if provided (before joining as participant)
+      // The conversation page will auto-join the creator when they navigate to it
+      if (firstMessage.trim()) {
+        await createMessage(firstMessage.trim(), currentUser.id, convo.id);
+      }
       
       // Reset form
       setTitle('');

@@ -67,20 +67,6 @@ export function useConversations(): UseConversationsReturn {
   const [currentConvo, setCurrentConvo] = useState<Convo | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load conversations from database on mount
-  useEffect(() => {
-    loadConversations();
-  }, []);
-
-  // Load current conversation when currentConvoId changes
-  useEffect(() => {
-    if (currentConvoId) {
-      loadCurrentConvo(currentConvoId);
-    } else {
-      setCurrentConvo(null);
-    }
-  }, [currentConvoId]);
-
   // Load conversations from database
   const loadConversations = useCallback(async () => {
     setLoading(true);
@@ -103,6 +89,22 @@ export function useConversations(): UseConversationsReturn {
       console.error('Error loading current conversation:', error);
     }
   }, []);
+
+  // Load conversations from database on mount
+  useEffect(() => {
+    loadConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load current conversation when currentConvoId changes
+  useEffect(() => {
+    if (currentConvoId) {
+      loadCurrentConvo(currentConvoId);
+    } else {
+      setCurrentConvo(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentConvoId]);
 
   // Create a new conversation
   const createConversation = useCallback(async (
