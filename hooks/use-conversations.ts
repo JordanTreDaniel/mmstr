@@ -45,7 +45,7 @@ export interface UseConversationsReturn {
   // Participations
   joinConversation: (userId: string, convoId: string) => Promise<boolean>;
   leaveConversation: (userId: string, convoId: string) => Promise<boolean>;
-  getParticipants: (convoId: string) => Promise<Participation[]>;
+  getParticipants: (convoId: string) => Promise<string[]>;
   checkParticipation: (userId: string, convoId: string) => Promise<boolean>;
   
   // Refresh
@@ -173,7 +173,8 @@ export function useConversations(): UseConversationsReturn {
 
   // Join a conversation
   const joinConversation = useCallback(async (userId: string, convoId: string): Promise<boolean> => {
-    return await addParticipation(userId, convoId);
+    const participation = await addParticipation(userId, convoId);
+    return !!participation;
   }, []);
 
   // Leave a conversation
@@ -182,7 +183,7 @@ export function useConversations(): UseConversationsReturn {
   }, []);
 
   // Get participants of a conversation
-  const getParticipants = useCallback(async (convoId: string): Promise<Participation[]> => {
+  const getParticipants = useCallback(async (convoId: string): Promise<string[]> => {
     return await getConversationParticipants(convoId);
   }, []);
 
