@@ -141,8 +141,11 @@ export default function Home() {
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-2">
             Make Me Say That&apos;s Right
           </h1>
+          <p className="text-lg sm:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-2 sm:mb-8 max-w-3xl mx-auto px-4">
+            Genius communication hack + AI
+          </p>
           <p className="text-lg sm:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 max-w-3xl mx-auto px-4">
-            Turn-based discussions that enforce comprehension before rebuttal
+            Never waste a conversation again.
           </p>
           
           {/* New Conversation Button */}
@@ -165,7 +168,7 @@ export default function Home() {
               What is MMSTR?
             </h2>
             <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
-              &quot;Make Me Say That&apos;s Right&quot; - a negotiation technique by Chris Voss 
+              &quot;Make Me Say That&apos;s Right&quot; - a communication technique by Chris Voss 
               that supercharges communication
             </p>
           </Card>
@@ -182,6 +185,18 @@ export default function Home() {
               <ul className="space-y-2 sm:space-y-3 text-base sm:text-lg text-gray-700 dark:text-gray-300">
                 <li className="flex items-start">
                   <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Teaches active listening</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Makes people feel heard, encouraging cooperation</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
+                  <span>Forces proof of understanding</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
                   <span>Ensures clarity (what you said vs what they heard)</span>
                 </li>
                 <li className="flex items-start">
@@ -194,16 +209,9 @@ export default function Home() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                  <span>Teaches active listening</span>
+                  <span>Stops the &quot;yeah yeah I understand&quot; bullshit</span>
                 </li>
-                <li className="flex items-start">
-                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                  <span>Makes people feel heard</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
-                  <span>Forces proof of understanding</span>
-                </li>
+
               </ul>
             </Card>
           </div>
@@ -230,6 +238,10 @@ export default function Home() {
                 <li className="flex items-start">
                   <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">4.</span>
                   <span>Only then can you respond</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">4.</span>
+                  <span>AI solves any disputes!</span>
                 </li>
               </ol>
             </Card>
