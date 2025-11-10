@@ -107,7 +107,7 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
       closeOnBackdropClick={!isSubmitting}
       closeOnEscape={!isSubmitting}
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Title Input */}
         <Input
           label="Conversation Title"
@@ -124,7 +124,7 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
 
         {/* Max Participants Slider */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
             Max Participants: {maxParticipants}
           </label>
           <input
@@ -144,7 +144,7 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
 
         {/* Max Interpretation Attempts Slider */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
             Max Interpretation Attempts: {maxAttempts}
           </label>
           <input
@@ -179,7 +179,7 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
         />
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 pt-4">
+        <div className="flex justify-end gap-2 sm:gap-3 pt-3 sm:pt-4">
           <Button
             type="button"
             variant="ghost"
