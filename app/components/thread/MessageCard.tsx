@@ -5,6 +5,7 @@ import Card from '@/app/components/ui/Card';
 import { BrainIcon } from '@/app/components/icons/BrainIcon';
 import { SpeakingIcon } from '@/app/components/icons/SpeakingIcon';
 import { CheckmarkIcon } from '@/app/components/icons/CheckmarkIcon';
+import { GradeIcon } from '@/app/components/icons/GradeIcon';
 import type { Message } from '@/types/entities';
 import type { MessageStatus } from '@/lib/message-status';
 
@@ -71,6 +72,12 @@ function StatusIcon({ status }: { status: MessageStatus }) {
       return (
         <div className={`${baseClasses} bg-green-500 text-white`} title="Completed">
           <CheckmarkIcon size={iconSize} />
+        </div>
+      );
+    case 'grade':
+      return (
+        <div className={`${baseClasses} bg-orange-500 text-white`} title="Grade interpretations">
+          <GradeIcon size={iconSize} />
         </div>
       );
     case 'none':

@@ -8,9 +8,10 @@
  * - brain: Interpretation needed (not started or pending)
  * - speaking: Interpretation accepted, can respond now
  * - checkmark: Interpretation completed and accepted
+ * - grade: Own message has interpretations that need grading
  * - none: No icon (e.g., message is from current user or no interpretation needed)
  */
-export type MessageStatus = 'brain' | 'speaking' | 'checkmark' | 'none';
+export type MessageStatus = 'brain' | 'speaking' | 'checkmark' | 'grade' | 'none';
 
 /**
  * Interpretation grading status
@@ -31,6 +32,8 @@ export interface MessageStatusParams {
   interpretationStatus?: GradingStatus;
   /** Has the current user already responded to this message? */
   hasResponded: boolean;
+  /** Does this message (if own) have ungraded interpretations? */
+  hasUngradedInterpretations?: boolean;
 }
 
 /**
@@ -45,9 +48,15 @@ export function getMessageStatus(params: MessageStatusParams): MessageStatus {
     hasInterpretation,
     interpretationStatus,
     hasResponded,
+    hasUngradedInterpretations,
   } = params;
 
-  // No icon for own messages
+  // If own message has ungraded interpretations, show grade icon
+  if (isOwnMessage && hasUngradedInterpretations) {
+    return 'grade';
+  }
+
+  // No icon for own messages (without ungraded interpretations)
   if (isOwnMessage) {
     return 'none';
   }
@@ -118,6 +127,8 @@ export function getStatusDescription(status: MessageStatus): string {
       return 'Can respond now';
     case 'checkmark':
       return 'Completed';
+    case 'grade':
+      return 'Grade interpretations';
     case 'none':
       return 'No action needed';
     default:

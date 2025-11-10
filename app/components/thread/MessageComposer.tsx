@@ -37,11 +37,23 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
 
   // Auto-select most recent message as reply target by default
   useEffect(() => {
-    if (messages.length > 0 && replyingToId === null) {
+    if (messages.length > 0 && currentUserId) {
       const mostRecentMessage = messages[messages.length - 1];
-      setReplyingToId(mostRecentMessage.id);
+      // Don't auto-select if the most recent message is from the current user
+      if (mostRecentMessage.userId === currentUserId) {
+        // If currently selected message is also user's own or null, clear selection
+        if (replyingToId === null || messages.find(m => m.id === replyingToId)?.userId === currentUserId) {
+          setReplyingToId(null);
+        }
+        return;
+      }
+
+      // Only auto-update if we have no selection OR if the current selection is the user's own message
+      if (replyingToId === null || messages.find(m => m.id === replyingToId)?.userId === currentUserId) {
+        setReplyingToId(mostRecentMessage.id);
+      }
     }
-  }, [messages, replyingToId]);
+  }, [messages, replyingToId, currentUserId]);
   
   // Check if user can reply to the selected message
   useEffect(() => {
@@ -112,7 +124,7 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
     }
     
     checkReplyPermission();
-  }, [replyingToId, currentUserId, messages]);
+  }, [replyingToId, currentUserId, messages, currentUser]);
 
   const handleSend = async () => {
     if (!canReply) {
@@ -162,8 +174,8 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
         onMessageSent();
       }
 
-      // Auto-select new message as reply target for next message
-      setReplyingToId(newMessage.id);
+      // Don't auto-select the message we just sent (can't reply to own message)
+      // The auto-select logic will pick it up when new messages arrive
     } catch (err) {
       console.error('Error sending message:', err);
       setError('Failed to send message. Please try again.');
