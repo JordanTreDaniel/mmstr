@@ -3,12 +3,36 @@
  * Uses @libsql/client in local file mode for persistent storage
  */
 
-import { createClient } from '@libsql/client';
+import { createClient, Client } from '@libsql/client';
 import path from 'path';
+import fs from 'fs';
 
-// Initialize SQLite client in local file mode
-export const client = createClient({
-  url: `file:${path.join(process.cwd(), 'data', 'app.db')}`
+// Lazy-initialized client
+let _client: Client | null = null;
+
+function getClient(): Client {
+  if (!_client) {
+    // Ensure data directory exists
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    const dbPath = path.join(dataDir, 'app.db');
+    _client = createClient({
+      url: `file:${dbPath}`
+    });
+  }
+  return _client;
+}
+
+// Export client accessor
+export const client = new Proxy({} as Client, {
+  get(target, prop) {
+    const client = getClient();
+    const value = (client as any)[prop];
+    return typeof value === 'function' ? value.bind(client) : value;
+  }
 });
 
 /**
@@ -16,8 +40,17 @@ export const client = createClient({
  * Creates all required tables if they don't exist
  */
 export async function initializeDatabase() {
+  const db = getClient();
   // Execute each CREATE TABLE statement separately
-  await client.execute(`
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS convos (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -27,7 +60,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  await client.execute(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS messages (
       id TEXT PRIMARY KEY,
       text TEXT NOT NULL,
@@ -39,7 +72,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  await client.execute(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS breakdowns (
       id TEXT PRIMARY KEY,
       message_id TEXT,
@@ -48,7 +81,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  await client.execute(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS points (
       id TEXT PRIMARY KEY,
       breakdown_id TEXT NOT NULL,
@@ -58,7 +91,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  await client.execute(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS interpretations (
       id TEXT PRIMARY KEY,
       message_id TEXT NOT NULL,
@@ -70,7 +103,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  await client.execute(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS interpretation_gradings (
       id TEXT PRIMARY KEY,
       interpretation_id TEXT NOT NULL,
@@ -83,7 +116,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  await client.execute(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS interpretation_grading_responses (
       id TEXT PRIMARY KEY,
       interpretation_grading_id TEXT NOT NULL,
@@ -93,7 +126,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  await client.execute(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS arbitrations (
       id TEXT PRIMARY KEY,
       message_id TEXT NOT NULL,
@@ -109,7 +142,7 @@ export async function initializeDatabase() {
     )
   `);
 
-  await client.execute(`
+  await db.execute(`
     CREATE TABLE IF NOT EXISTS participations (
       user_id TEXT NOT NULL,
       convo_id TEXT NOT NULL,

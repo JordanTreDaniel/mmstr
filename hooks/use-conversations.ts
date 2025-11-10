@@ -32,7 +32,7 @@ export interface UseConversationsReturn {
   loading: boolean;
   
   // Actions
-  createConversation: (title: string, maxAttempts?: number, participantLimit?: number) => Promise<Convo>;
+  createConversation: (title: string, userId: string, userName: string, maxAttempts?: number, participantLimit?: number) => Promise<Convo>;
   getConversation: (id: string) => Promise<Convo | null>;
   updateConversation: (id: string, updates: Partial<Omit<Convo, 'id' | 'createdAt'>>) => Promise<Convo | null>;
   deleteConversation: (id: string) => Promise<boolean>;
@@ -109,10 +109,12 @@ export function useConversations(): UseConversationsReturn {
   // Create a new conversation
   const createConversation = useCallback(async (
     title: string,
+    userId: string,
+    userName: string,
     maxAttempts: number = 3,
     participantLimit: number = 20
   ): Promise<Convo> => {
-    const convo = await createConvoAction(title, maxAttempts, participantLimit);
+    const convo = await createConvoAction(title, userId, userName, maxAttempts, participantLimit);
     await loadConversations();
     return convo;
   }, [loadConversations]);

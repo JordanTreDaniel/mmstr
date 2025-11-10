@@ -1,13 +1,15 @@
 /**
  * Custom React hook for managing the current user
  * Handles user creation, persistence, and switching
+ * Syncs users with the database via server actions
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocalStorage } from './use-local-storage';
 import { STORAGE_KEYS } from '@/lib/storage-keys';
 import { getItem, setItem } from '@/lib/storage';
 import type { User } from '@/types/entities';
+import { ensureUser } from '@/app/actions/users';
 
 export interface UseCurrentUserReturn {
   currentUser: User | null;
@@ -91,6 +93,25 @@ export function useCurrentUser(): UseCurrentUserReturn {
   const getUserById = useCallback((userId: string): User | null => {
     return allUsers.find(u => u.id === userId) || null;
   }, [allUsers]);
+
+  // Sync current user with database
+  const [isSynced, setIsSynced] = useState(false);
+  
+  useEffect(() => {
+    async function syncUserWithDatabase() {
+      if (currentUser && !isSynced) {
+        try {
+          // Ensure user exists in database
+          await ensureUser(currentUser.id, currentUser.name);
+          setIsSynced(true);
+        } catch (error) {
+          console.error('Failed to sync user with database:', error);
+        }
+      }
+    }
+    
+    syncUserWithDatabase();
+  }, [currentUser, isSynced]);
 
   // Create a default user if none exists
   useEffect(() => {

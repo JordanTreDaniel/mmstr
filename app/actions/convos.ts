@@ -3,22 +3,33 @@
 import { client } from '@/lib/db';
 import type { Convo } from '@/types/entities';
 import { v4 as uuidv4 } from 'uuid';
+import { ensureUser } from './users';
+import { addParticipation } from './participations';
 
 /**
- * Create a new conversation
+ * Create a new conversation and add the creator as a participant
  */
 export async function createConversation(
   title: string,
+  creatorUserId: string,
+  creatorUserName: string,
   maxAttempts: number = 3,
   participantLimit: number = 20
 ): Promise<Convo> {
   const id = uuidv4();
   const createdAt = new Date().toISOString();
   
+  // Ensure creator exists in database
+  await ensureUser(creatorUserId, creatorUserName);
+  
+  // Create conversation
   await client.execute({
     sql: 'INSERT INTO convos (id, title, created_at, max_attempts, participant_limit) VALUES (?, ?, ?, ?, ?)',
     args: [id, title, createdAt, maxAttempts, participantLimit]
   });
+  
+  // Add creator as participant
+  await addParticipation(creatorUserId, id);
   
   return { id, title, createdAt, maxAttempts, participantLimit };
 }

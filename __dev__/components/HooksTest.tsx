@@ -85,12 +85,13 @@ export default function HooksTest() {
   };
 
   const handleCreateConvo = async () => {
-    if (convoTitle.trim()) {
-      const convo = await createConversation(convoTitle.trim());
+    if (convoTitle.trim() && currentUser) {
+      const convo = await createConversation(
+        convoTitle.trim(),
+        currentUser.id,
+        currentUser.name
+      );
       setCurrentConvo(convo.id);
-      if (currentUser) {
-        await joinConversation(currentUser.id, convo.id);
-      }
       setConvoTitle('');
     }
   };
