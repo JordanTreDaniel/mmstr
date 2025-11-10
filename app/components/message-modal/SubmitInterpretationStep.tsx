@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Card from '@/app/components/ui/Card';
 import Button from '@/app/components/ui/Button';
 import Textarea from '@/app/components/ui/Textarea';
-import { createInterpretation } from '@/app/actions/interpretations';
+import { createInterpretation, gradeInterpretation } from '@/app/actions/interpretations';
 import { MESSAGE_MAX_CHARS, validateMessage } from '@/lib/character-validation';
 import type { Message } from '@/types/entities';
 
@@ -31,6 +31,7 @@ const SubmitInterpretationStep: React.FC<SubmitInterpretationStepProps> = ({
   const [showOriginal, setShowOriginal] = useState(false);
   const [viewCount, setViewCount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGrading, setIsGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Handle toggling the original message view
@@ -56,25 +57,34 @@ const SubmitInterpretationStep: React.FC<SubmitInterpretationStepProps> = ({
 
     try {
       // Create interpretation record
-      await createInterpretation(
+      const interpretation = await createInterpretation(
         message.id,
         currentUserId,
         interpretationText,
         attemptNumber
       );
 
-      // Notify parent component
+      // Show AI grading loading state
+      setIsSubmitting(false);
+      setIsGrading(true);
+
+      // Trigger AI grading
+      await gradeInterpretation(interpretation.id);
+
+      // Grading complete - notify parent component
+      setIsGrading(false);
       onInterpretationSubmitted();
     } catch (err) {
       console.error('Error submitting interpretation:', err);
       setError('Failed to submit interpretation. Please try again.');
       setIsSubmitting(false);
+      setIsGrading(false);
     }
   };
 
   // Check if submit should be enabled
   const validation = validateMessage(interpretationText);
-  const canSubmit = validation.isValid && !isSubmitting;
+  const canSubmit = validation.isValid && !isSubmitting && !isGrading;
 
   return (
     <div className="space-y-6">
@@ -150,6 +160,20 @@ const SubmitInterpretationStep: React.FC<SubmitInterpretationStepProps> = ({
         </div>
       )}
 
+      {/* AI Grading Loading State */}
+      {isGrading && (
+        <Card variant="elevated" padding="md">
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400"></div>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                🤖 AI is analyzing your interpretation...
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Submit button */}
       <div className="text-center space-y-3">
         <Button
@@ -159,7 +183,7 @@ const SubmitInterpretationStep: React.FC<SubmitInterpretationStepProps> = ({
           disabled={!canSubmit}
           className="min-w-[200px]"
         >
-          {isSubmitting ? 'Submitting...' : 'Submit Interpretation'}
+          {isSubmitting ? 'Submitting...' : isGrading ? 'AI Grading...' : 'Submit Interpretation'}
         </Button>
 
         {!validation.isValid && interpretationText.length > 0 && (

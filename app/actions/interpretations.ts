@@ -3,6 +3,9 @@
 import { client } from '@/lib/db';
 import type { Interpretation, InterpretationGrading, InterpretationGradingResponse, Arbitration } from '@/types/entities';
 import { v4 as uuidv4 } from 'uuid';
+import { calculateSimilarity } from '@/mocks/mock-ai-similarity';
+import { calculateWordSimilarity } from '@/lib/word-similarity';
+import { getMessageById } from './messages';
 
 /**
  * Create an interpretation
@@ -249,5 +252,65 @@ export async function getArbitrationByInterpretation(interpretationId: string): 
     explanation: row.explanation as string,
     createdAt: row.created_at as string,
   };
+}
+
+/**
+ * Grade an interpretation using AI similarity scoring
+ * This function:
+ * 1. Calls the mock AI similarity function to calculate semantic similarity
+ * 2. Checks for too-similar wording (>70% word overlap)
+ * 3. Creates an InterpretationGrading record with appropriate status
+ * 4. Auto-rejects if wording is too similar
+ * 5. Sets status to 'pending' if below auto-accept threshold (90%)
+ * 
+ * @param interpretationId The interpretation to grade
+ * @returns The created grading record
+ */
+export async function gradeInterpretation(
+  interpretationId: string
+): Promise<InterpretationGrading> {
+  // Get the interpretation
+  const interpretation = await getInterpretationById(interpretationId);
+  if (!interpretation) {
+    throw new Error('Interpretation not found');
+  }
+
+  // Get the original message
+  const message = await getMessageById(interpretation.messageId);
+  if (!message) {
+    throw new Error('Original message not found');
+  }
+
+  // Calculate AI similarity score (semantic similarity)
+  const aiResult = await calculateSimilarity(message.text, interpretation.text);
+
+  // Check for too-similar wording (word overlap)
+  const wordSimilarity = calculateWordSimilarity(message.text, interpretation.text);
+
+  // Determine status:
+  // - Auto-reject if word overlap > 70%
+  // - Otherwise, 'pending' (author must manually accept/reject)
+  let status: 'pending' | 'rejected';
+  let notes: string | null = null;
+
+  if (wordSimilarity.shouldAutoReject) {
+    status = 'rejected';
+    notes = `Automatically rejected: ${Math.round(wordSimilarity.similarity * 100)}% word overlap (threshold: 70%). Please use different wording to demonstrate understanding.`;
+  } else {
+    // Below auto-accept threshold or within acceptable range
+    status = 'pending';
+    notes = null;
+  }
+
+  // Create the grading record
+  const grading = await createGrading(
+    interpretationId,
+    status,
+    aiResult.similarityScore,
+    aiResult.autoAcceptSuggested,
+    notes
+  );
+
+  return grading;
 }
 
