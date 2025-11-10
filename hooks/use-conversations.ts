@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useLocalStorage } from './use-local-storage';
+import { useCurrentUser } from './use-current-user';
 import {
   getConversations,
   createConversation as createConvoAction,
@@ -22,6 +23,7 @@ import {
   removeParticipation,
   getConversationParticipants,
   isUserParticipating,
+  getUserParticipations,
 } from '@/app/actions/participations';
 import type { Convo, Message, Participation } from '@/types/entities';
 
@@ -32,7 +34,7 @@ export interface UseConversationsReturn {
   loading: boolean;
   
   // Actions
-  createConversation: (title: string, userId: string, userName: string, maxAttempts?: number, participantLimit?: number) => Promise<Convo>;
+  createConversation: (title: string, userId: number, userName: string, maxAttempts?: number, participantLimit?: number) => Promise<Convo>;
   getConversation: (id: string) => Promise<Convo | null>;
   updateConversation: (id: string, updates: Partial<Omit<Convo, 'id' | 'createdAt'>>) => Promise<Convo | null>;
   deleteConversation: (id: string) => Promise<boolean>;
@@ -40,13 +42,13 @@ export interface UseConversationsReturn {
   
   // Messages
   getMessages: (convoId: string) => Promise<Message[]>;
-  addMessage: (text: string, userId: string, convoId: string, replyingToMessageId?: string | null) => Promise<Message | null>;
+  addMessage: (text: string, userId: number, convoId: string, replyingToMessageId?: string | null) => Promise<Message | null>;
   
   // Participations
-  joinConversation: (userId: string, convoId: string) => Promise<boolean>;
-  leaveConversation: (userId: string, convoId: string) => Promise<boolean>;
-  getParticipants: (convoId: string) => Promise<string[]>;
-  checkParticipation: (userId: string, convoId: string) => Promise<boolean>;
+  joinConversation: (userId: number, convoId: string) => Promise<boolean>;
+  leaveConversation: (userId: number, convoId: string) => Promise<boolean>;
+  getParticipants: (convoId: string) => Promise<number[]>;
+  checkParticipation: (userId: number, convoId: string) => Promise<boolean>;
   
   // Refresh
   refresh: () => Promise<void>;
@@ -56,6 +58,8 @@ export interface UseConversationsReturn {
  * Hook for managing all conversation-related data
  */
 export function useConversations(): UseConversationsReturn {
+  const { currentUserId } = useCurrentUser();
+  
   // Track current conversation ID in localStorage (browser preference)
   const [currentConvoId, setCurrentConvoId] = useLocalStorage<string | null>(
     'mmstr:current_convo_id',
@@ -67,18 +71,34 @@ export function useConversations(): UseConversationsReturn {
   const [currentConvo, setCurrentConvo] = useState<Convo | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load conversations from database
+  // Load conversations from database, filtered by user participation
   const loadConversations = useCallback(async () => {
     setLoading(true);
     try {
-      const convos = await getConversations();
-      setConversations(convos);
+      const allConvos = await getConversations();
+      
+      // If no user is logged in, show no conversations
+      if (!currentUserId) {
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Get user's participated conversation IDs
+      const participatedConvoIds = await getUserParticipations(currentUserId);
+      
+      // Filter conversations to only those user participates in
+      const filteredConvos = allConvos.filter(convo => 
+        participatedConvoIds.includes(convo.id)
+      );
+      
+      setConversations(filteredConvos);
     } catch (error) {
       console.error('Error loading conversations:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUserId]);
 
   // Load current conversation
   const loadCurrentConvo = useCallback(async (id: string) => {
@@ -109,7 +129,7 @@ export function useConversations(): UseConversationsReturn {
   // Create a new conversation
   const createConversation = useCallback(async (
     title: string,
-    userId: string,
+    userId: number,
     userName: string,
     maxAttempts: number = 3,
     participantLimit: number = 20
@@ -164,7 +184,7 @@ export function useConversations(): UseConversationsReturn {
   // Add a message to a conversation
   const addMessage = useCallback(async (
     text: string,
-    userId: string,
+    userId: number,
     convoId: string,
     replyingToMessageId: string | null = null
   ): Promise<Message | null> => {
@@ -172,23 +192,23 @@ export function useConversations(): UseConversationsReturn {
   }, []);
 
   // Join a conversation
-  const joinConversation = useCallback(async (userId: string, convoId: string): Promise<boolean> => {
+  const joinConversation = useCallback(async (userId: number, convoId: string): Promise<boolean> => {
     const participation = await addParticipation(userId, convoId);
     return !!participation;
   }, []);
 
   // Leave a conversation
-  const leaveConversation = useCallback(async (userId: string, convoId: string): Promise<boolean> => {
+  const leaveConversation = useCallback(async (userId: number, convoId: string): Promise<boolean> => {
     return await removeParticipation(userId, convoId);
   }, []);
 
   // Get participants of a conversation
-  const getParticipants = useCallback(async (convoId: string): Promise<string[]> => {
+  const getParticipants = useCallback(async (convoId: string): Promise<number[]> => {
     return await getConversationParticipants(convoId);
   }, []);
 
   // Check if user is participating
-  const checkParticipation = useCallback(async (userId: string, convoId: string): Promise<boolean> => {
+  const checkParticipation = useCallback(async (userId: number, convoId: string): Promise<boolean> => {
     return await isUserParticipating(userId, convoId);
   }, []);
 

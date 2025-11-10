@@ -54,10 +54,17 @@ export function useCurrentUser(): UseCurrentUserReturn {
       
       setAllUsers(validUsers);
       
-      // Find current user (but don't clear if not found - let user handle it)
+      // Find current user
       if (currentUserId) {
         const user = validUsers.find(u => u.id === currentUserId);
-        setCurrentUser(user || null);
+        if (user) {
+          setCurrentUser(user);
+        } else {
+          // User ID in localStorage doesn't exist in database - clear it
+          console.warn('Current user ID not found in database, clearing localStorage');
+          clearUserId();
+          setCurrentUser(null);
+        }
       } else {
         setCurrentUser(null);
       }
@@ -66,7 +73,7 @@ export function useCurrentUser(): UseCurrentUserReturn {
     } finally {
       setLoading(false);
     }
-  }, [currentUserId]);
+  }, [currentUserId, clearUserId]);
 
   // Load users on mount and when currentUserId changes
   useEffect(() => {

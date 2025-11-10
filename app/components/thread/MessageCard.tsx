@@ -5,6 +5,7 @@ import Card from '@/app/components/ui/Card';
 import { BrainIcon } from '@/app/components/icons/BrainIcon';
 import { SpeakingIcon } from '@/app/components/icons/SpeakingIcon';
 import { CheckmarkIcon } from '@/app/components/icons/CheckmarkIcon';
+import { GradeIcon } from '@/app/components/icons/GradeIcon';
 import type { Message } from '@/types/entities';
 import type { MessageStatus } from '@/lib/message-status';
 
@@ -17,6 +18,8 @@ export interface MessageCardProps {
   status: MessageStatus;
   /** Reply-to message snippet if this is a reply */
   replyingToSnippet?: string | null;
+  /** Is this message from the current user? */
+  isOwnMessage?: boolean;
   /** Callback when card is clicked */
   onClick?: () => void;
 }
@@ -71,6 +74,12 @@ function StatusIcon({ status }: { status: MessageStatus }) {
           <CheckmarkIcon size={iconSize} />
         </div>
       );
+    case 'grade':
+      return (
+        <div className={`${baseClasses} bg-orange-500 text-white`} title="Grade interpretations">
+          <GradeIcon size={iconSize} />
+        </div>
+      );
     case 'none':
     default:
       return null;
@@ -86,17 +95,19 @@ export function MessageCard({
   userName,
   status,
   replyingToSnippet,
+  isOwnMessage = false,
   onClick,
 }: MessageCardProps) {
   return (
-    <div className="relative">
+    <div className={`relative flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+      <div className={`${isOwnMessage ? 'max-w-[80%] ml-auto' : 'max-w-[80%] mr-auto'}`}>
       <Card
         variant="default"
         padding="md"
         hoverable
         clickable={!!onClick}
         onClick={onClick}
-        className="relative"
+          className={`relative ${isOwnMessage ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
       >
         {/* Status icon in top-right corner */}
         {status !== 'none' && <StatusIcon status={status} />}
@@ -143,6 +154,7 @@ export function MessageCard({
           {message.text}
         </div>
       </Card>
+      </div>
     </div>
   );
 }

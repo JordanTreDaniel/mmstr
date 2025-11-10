@@ -123,12 +123,12 @@ export function validateMessage(text: string): ValidationResult {
 
 /**
  * Check if a message requires interpretation before response
- * Messages under minimum requirements do NOT require interpretation
+ * All messages require interpretation regardless of length
  * @param text The message text
- * @returns true if interpretation is required
+ * @returns true if interpretation is required (always true)
  */
 export function requiresInterpretation(text: string): boolean {
-  return meetsMinimum(text);
+  return true;
 }
 
 /**

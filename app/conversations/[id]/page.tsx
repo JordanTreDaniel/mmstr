@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header, PageContainer } from '@/app/components/layout';
 import Button from '@/app/components/ui/Button';
@@ -11,6 +11,8 @@ import { useConversations } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getConversationMessages } from '@/app/actions/messages';
 import { getInterpretationsByMessage, getGradingByInterpretation } from '@/app/actions/interpretations';
+import { getUserById as getUserByIdAction } from '@/app/actions/users';
+import { addParticipation, isUserParticipating } from '@/app/actions/participations';
 import { getMessageStatus } from '@/lib/message-status';
 import { requiresInterpretation } from '@/lib/character-validation';
 import type { Convo, Message } from '@/types/entities';
@@ -35,24 +37,20 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Redirect to landing page with invitation if user is not authenticated
-  useEffect(() => {
-    if (!userLoading && !currentUserId) {
-      router.push(`/?join=${id}`);
+  // Function definitions
+  const ensureParticipation = async () => {
+    if (!currentUserId) return;
+    
+    try {
+      const isParticipating = await isUserParticipating(currentUserId, id);
+      if (!isParticipating) {
+        await addParticipation(currentUserId, id);
+        console.log('User added as participant to conversation');
+      }
+    } catch (error) {
+      console.error('Error ensuring participation:', error);
     }
-  }, [currentUserId, userLoading, id, router]);
-
-  useEffect(() => {
-    if (currentUserId) {
-      loadConversation();
-    }
-  }, [id, currentUserId]);
-
-  useEffect(() => {
-    if (currentUserId) {
-      loadMessages();
-    }
-  }, [id, currentUserId]);
+  };
 
   const loadConversation = async () => {
     setLoading(true);
@@ -73,7 +71,9 @@ export default function ConversationPage({ params }: ConversationPageProps) {
     }
   };
 
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
+    if (!currentUserId) return;
+    
     try {
       const msgs = await getConversationMessages(id);
       setMessages(msgs);
@@ -81,7 +81,8 @@ export default function ConversationPage({ params }: ConversationPageProps) {
       // Build metadata for each message with full interpretation status
       const withMetadata: MessageWithMetadata[] = await Promise.all(
         msgs.map(async (msg) => {
-          const user = getUserById(msg.userId);
+          // Fetch user from database directly to ensure we have the latest user info
+          const user = await getUserByIdAction(msg.userId);
           const userName = user?.name || 'Unknown User';
           
           const isOwnMessage = msg.userId === currentUserId;
@@ -90,6 +91,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
           // Check if current user has an interpretation for this message
           let hasInterpretation = false;
           let interpretationStatus: 'pending' | 'accepted' | 'rejected' | undefined = undefined;
+          let hasUngradedInterpretations = false;
           
           if (currentUserId && !isOwnMessage && needsInterpretation) {
             const interpretations = await getInterpretationsByMessage(msg.id, currentUserId);
@@ -100,6 +102,18 @@ export default function ConversationPage({ params }: ConversationPageProps) {
               const grading = await getGradingByInterpretation(latestInterpretation.id);
               if (grading) {
                 interpretationStatus = grading.status;
+              }
+            }
+          }
+          
+          // Check if own message has ungraded interpretations
+          if (currentUserId && isOwnMessage && needsInterpretation) {
+            const allInterpretations = await getInterpretationsByMessage(msg.id);
+            for (const interp of allInterpretations) {
+              const grading = await getGradingByInterpretation(interp.id);
+              if (!grading || grading.status === 'pending') {
+                hasUngradedInterpretations = true;
+                break;
               }
             }
           }
@@ -115,6 +129,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
             hasInterpretation,
             interpretationStatus,
             hasResponded,
+            hasUngradedInterpretations,
           });
           
           // Get reply-to snippet if applicable
@@ -141,11 +156,45 @@ export default function ConversationPage({ params }: ConversationPageProps) {
     } catch (err) {
       console.error('Error loading messages:', err);
     }
-  };
+  }, [id, currentUserId]);
 
   const handleBackClick = () => {
     router.push('/');
   };
+
+  // Effects
+  // Redirect to landing page with invitation if user is not authenticated
+  useEffect(() => {
+    if (!userLoading && !currentUserId) {
+      router.push(`/?join=${id}`);
+    }
+  }, [currentUserId, userLoading, id, router]);
+
+  useEffect(() => {
+    if (currentUserId) {
+      loadConversation();
+      // Automatically add user as participant if not already
+      ensureParticipation();
+    }
+  }, [id, currentUserId]);
+
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  // Poll for new messages and interpretations every 10 seconds
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const interval = setInterval(() => {
+      // Only poll if document is visible (user is actively viewing the page)
+      if (document.visibilityState === 'visible') {
+        loadMessages();
+      }
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [currentUserId, loadMessages]);
 
   const handleShareClick = async () => {
     const url = window.location.href;
@@ -245,6 +294,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
         <Card variant="elevated" padding="lg">
           <MessageList 
             messages={messagesWithMetadata}
+            currentUserId={currentUserId}
             onMessageClick={(messageId) => {
               setSelectedMessageId(messageId);
               setIsModalOpen(true);
@@ -259,6 +309,10 @@ export default function ConversationPage({ params }: ConversationPageProps) {
               convoId={id}
               messages={messages}
               onMessageSent={loadMessages}
+              onOpenMessageModal={(messageId) => {
+                setSelectedMessageId(messageId);
+                setIsModalOpen(true);
+              }}
             />
           </Card>
         </div>

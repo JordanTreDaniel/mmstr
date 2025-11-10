@@ -18,6 +18,7 @@ export interface Convo {
   id: string;
   title: string;
   createdAt: string;
+  createdBy: number; // User ID of conversation creator
   maxAttempts: number; // Max interpretation attempts (default 3)
   participantLimit: number; // Max participants allowed (default 20)
 }

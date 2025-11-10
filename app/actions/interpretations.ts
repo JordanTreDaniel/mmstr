@@ -5,7 +5,9 @@ import type { Interpretation, InterpretationGrading, InterpretationGradingRespon
 import { v4 as uuidv4 } from 'uuid';
 import { calculateSimilarity } from '@/mocks/mock-ai-similarity';
 import { calculateWordSimilarity } from '@/lib/word-similarity';
+import { arbitrateInterpretation, arbitrateMaxAttempts } from '@/mocks/mock-ai-arbitration';
 import { getMessageById } from './messages';
+import { getConversationById } from './convos';
 
 /**
  * Create an interpretation
@@ -115,6 +117,29 @@ export async function getGradingByInterpretation(interpretationId: string): Prom
 }
 
 /**
+ * Get grading by ID
+ */
+export async function getGradingById(id: string): Promise<InterpretationGrading | null> {
+  const result = await client.execute({
+    sql: 'SELECT * FROM interpretation_gradings WHERE id = ?',
+    args: [id]
+  });
+  
+  if (result.rows.length === 0) return null;
+  
+  const row = result.rows[0];
+  return {
+    id: row.id as string,
+    interpretationId: row.interpretation_id as string,
+    status: row.status as 'pending' | 'accepted' | 'rejected',
+    similarityScore: row.similarity_score as number,
+    autoAcceptSuggested: (row.auto_accept_suggested as number) === 1,
+    notes: row.notes as string | null,
+    createdAt: row.created_at as string,
+  };
+}
+
+/**
  * Update grading status
  */
 export async function updateGrading(
@@ -157,7 +182,7 @@ export async function updateGrading(
   if (result.rows.length === 0) return null;
   
   const row = result.rows[0];
-  return {
+  const updatedGrading = {
     id: row.id as string,
     interpretationId: row.interpretation_id as string,
     status: row.status as 'pending' | 'accepted' | 'rejected',
@@ -166,10 +191,18 @@ export async function updateGrading(
     notes: row.notes as string | null,
     createdAt: row.created_at as string,
   };
+  
+  // If status was updated to 'rejected', check if max attempts reached
+  if (updates.status === 'rejected') {
+    await triggerArbitrationForMaxAttempts(id);
+  }
+  
+  return updatedGrading;
 }
 
 /**
  * Create a grading response (dispute)
+ * Automatically triggers arbitration after the dispute is submitted
  */
 export async function createGradingResponse(
   interpretationGradingId: string,
@@ -183,7 +216,12 @@ export async function createGradingResponse(
     args: [id, interpretationGradingId, text, createdAt]
   });
   
-  return { id, interpretationGradingId, text, createdAt };
+  const response = { id, interpretationGradingId, text, createdAt };
+  
+  // Automatically trigger arbitration after dispute submission
+  await triggerArbitrationForDispute(interpretationGradingId, id, text);
+  
+  return response;
 }
 
 /**
@@ -255,6 +293,116 @@ export async function getArbitrationByInterpretation(interpretationId: string): 
 }
 
 /**
+ * Trigger arbitration for a disputed interpretation
+ * Called automatically when a dispute is submitted
+ */
+async function triggerArbitrationForDispute(
+  interpretationGradingId: string,
+  responseId: string,
+  disputeText: string
+): Promise<void> {
+  // Get the grading by its ID
+  const grading = await getGradingById(interpretationGradingId);
+  if (!grading) {
+    throw new Error('Grading not found');
+  }
+
+  // Get the interpretation
+  const interpretation = await getInterpretationById(grading.interpretationId);
+  if (!interpretation) {
+    throw new Error('Interpretation not found');
+  }
+
+  // Get the original message
+  const message = await getMessageById(interpretation.messageId);
+  if (!message) {
+    throw new Error('Original message not found');
+  }
+
+  // Call mock AI arbitration
+  const arbitrationResult = await arbitrateInterpretation(
+    message.text,
+    interpretation.text,
+    grading.notes,
+    disputeText
+  );
+
+  // Create arbitration record
+  await createArbitration(
+    message.id,
+    interpretation.id,
+    grading.id,
+    responseId,
+    arbitrationResult.result,
+    'complete', // ruling status
+    arbitrationResult.explanation
+  );
+}
+
+/**
+ * Trigger arbitration when max interpretation attempts are reached
+ * Called automatically when the final attempt is rejected
+ */
+async function triggerArbitrationForMaxAttempts(
+  interpretationGradingId: string
+): Promise<void> {
+  // Get the grading by its ID
+  const grading = await getGradingById(interpretationGradingId);
+  if (!grading) {
+    throw new Error('Grading not found');
+  }
+
+  // Get the interpretation
+  const interpretation = await getInterpretationById(grading.interpretationId);
+  if (!interpretation) {
+    throw new Error('Interpretation not found');
+  }
+
+  // Get the original message
+  const message = await getMessageById(interpretation.messageId);
+  if (!message) {
+    throw new Error('Original message not found');
+  }
+
+  // Get the conversation to check max attempts
+  const convo = await getConversationById(message.convoId);
+  if (!convo) {
+    throw new Error('Conversation not found');
+  }
+
+  // Verify this is actually the max attempt
+  if (interpretation.attemptNumber < convo.maxAttempts) {
+    // Not at max attempts yet, don't trigger arbitration
+    return;
+  }
+
+  // Check if arbitration already exists for this interpretation
+  const existingArbitration = await getArbitrationByInterpretation(interpretation.id);
+  if (existingArbitration) {
+    // Arbitration already triggered, don't duplicate
+    return;
+  }
+
+  // Call mock AI arbitration for max attempts (more lenient)
+  const arbitrationResult = await arbitrateMaxAttempts(
+    message.text,
+    interpretation.text,
+    interpretation.attemptNumber
+  );
+
+  // Create arbitration record (no responseId since this wasn't triggered by a dispute)
+  await createArbitration(
+    message.id,
+    interpretation.id,
+    grading.id,
+    null, // No dispute response ID for max attempts arbitration
+    arbitrationResult.result,
+    'complete', // ruling status
+    arbitrationResult.explanation
+  );
+}
+
+/**
  * Grade an interpretation using AI similarity scoring
  * This function:
  * 1. Calls the mock AI similarity function to calculate semantic similarity
@@ -310,6 +458,11 @@ export async function gradeInterpretation(
     aiResult.autoAcceptSuggested,
     notes
   );
+  
+  // If auto-rejected and max attempts reached, trigger arbitration
+  if (status === 'rejected') {
+    await triggerArbitrationForMaxAttempts(grading.id);
+  }
 
   return grading;
 }

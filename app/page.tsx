@@ -7,6 +7,7 @@ import Card from '@/app/components/ui/Card';
 import Modal from '@/app/components/ui/Modal';
 import { Header, PageContainer } from '@/app/components/layout';
 import CreateConvoModal from '@/app/components/modals/CreateConvoModal';
+import SignUpModal from '@/app/components/modals/SignUpModal';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getConversationById } from '@/app/actions/convos';
 
@@ -17,11 +18,18 @@ export default function Home() {
   const { currentUser, createUser, allUsers } = useCurrentUser();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
-  const [joiningConvo, setJoiningConvo] = useState<{ id: string; title: string; } | null>(null);
+  const [isSignUpModalOpen, setIsSignUpModalOpen] = useState(false);
+  const [signUpIntent, setSignUpIntent] = useState<'create' | 'join' | null>(null);
+  const [joiningConvo, setJoiningConvo] = useState<{ id: string; title: string; createdBy: number; } | null>(null);
   const [isJoining, setIsJoining] = useState(false);
 
   const handleNewConversation = () => {
-    setIsCreateModalOpen(true);
+    if (!currentUser) {
+      setSignUpIntent('create');
+      setIsSignUpModalOpen(true);
+    } else {
+      setIsCreateModalOpen(true);
+    }
   };
 
   const handleConversationCreated = (convoId: string) => {
@@ -47,7 +55,7 @@ export default function Home() {
         try {
           const convo = await getConversationById(joinConvoId);
           if (convo) {
-            setJoiningConvo({ id: convo.id, title: convo.title });
+            setJoiningConvo({ id: convo.id, title: convo.title, createdBy: convo.createdBy });
             setIsJoinModalOpen(true);
           }
         } catch (error) {
@@ -61,16 +69,17 @@ export default function Home() {
   const handleJoinDiscussion = async () => {
     if (!joiningConvo) return;
 
+    // Check if user needs to sign up first
+    if (!currentUser) {
+      setSignUpIntent('join');
+      setIsSignUpModalOpen(true);
+      setIsJoinModalOpen(false);
+      return;
+    }
+
     setIsJoining(true);
     try {
-      // Create user if they don't have one
-      const userCount = allUsers.length + 1;
-      const userName = `User ${userCount}`;
-
-      console.log('Creating user to join conversation:', userName);
-      await createUser(userName);
-
-      // Redirect to conversation
+      // Redirect to conversation (participation will be added automatically when they interact)
       router.push(`/conversations/${joiningConvo.id}`);
     } catch (error) {
       console.error('Failed to join conversation:', error);
@@ -79,6 +88,33 @@ export default function Home() {
       setIsJoining(false);
     }
   };
+
+  const handleSignUp = async (name: string) => {
+    try {
+      await createUser(name);
+      setIsSignUpModalOpen(false);
+      // Note: We'll open the appropriate modal in the useEffect below once currentUser is updated
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      throw error;
+    }
+  };
+
+  // After sign up completes and currentUser is updated, open the appropriate modal
+  useEffect(() => {
+    // Ensure user has a valid ID before proceeding
+    if (currentUser && currentUser.id && currentUser.id > 0 && signUpIntent) {
+      // Small delay to ensure state is fully propagated
+      setTimeout(() => {
+        if (signUpIntent === 'create') {
+          setIsCreateModalOpen(true);
+        } else if (signUpIntent === 'join' && joiningConvo) {
+          setIsJoinModalOpen(true);
+        }
+        setSignUpIntent(null);
+      }, 100);
+    }
+  }, [currentUser, signUpIntent, joiningConvo]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
@@ -201,12 +237,14 @@ export default function Home() {
         </section>
       </PageContainer>
 
-      {/* Create Conversation Modal */}
-      <CreateConvoModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleConversationCreated}
-      />
+      {/* Create Conversation Modal - only render if user is logged in */}
+      {currentUser && currentUser.id && (
+        <CreateConvoModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={handleConversationCreated}
+        />
+      )}
 
       {/* Join Conversation Modal */}
       <Modal
@@ -220,7 +258,7 @@ export default function Home() {
         <div className="space-y-6">
           <div className="text-center">
             <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">
-              You&apos;ve been invited to join:
+              You&apos;ve been invited by <strong>{joiningConvo ? (allUsers.find(u => u.id === joiningConvo.createdBy)?.name || 'Unknown User') : ''}</strong> to join:
             </p>
             <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               {joiningConvo?.title}
@@ -250,6 +288,16 @@ export default function Home() {
           </div>
         </div>
       </Modal>
+
+      {/* Sign Up Modal */}
+      <SignUpModal
+        isOpen={isSignUpModalOpen}
+        onClose={() => {
+          setIsSignUpModalOpen(false);
+          setSignUpIntent(null);
+        }}
+        onSignUp={handleSignUp}
+      />
     </div>
   );
 }

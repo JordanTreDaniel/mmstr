@@ -15,6 +15,8 @@ export interface MessageWithMetadata {
 export interface MessageListProps {
   /** Messages to display with their metadata */
   messages: MessageWithMetadata[];
+  /** Current user ID for determining message alignment */
+  currentUserId?: number | null;
   /** Callback when a message card is clicked */
   onMessageClick?: (messageId: string) => void;
 }
@@ -23,7 +25,7 @@ export interface MessageListProps {
  * MessageList component
  * Renders a chronological list of messages in a conversation
  */
-export function MessageList({ messages, onMessageClick }: MessageListProps) {
+export function MessageList({ messages, currentUserId, onMessageClick }: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div className="flex items-center justify-center py-12 text-gray-500 dark:text-gray-400">
@@ -41,6 +43,7 @@ export function MessageList({ messages, onMessageClick }: MessageListProps) {
           userName={userName}
           status={status}
           replyingToSnippet={replyingToSnippet}
+          isOwnMessage={currentUserId ? message.userId === currentUserId : false}
           onClick={onMessageClick ? () => onMessageClick(message.id) : undefined}
         />
       ))}
