@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { createMessage } from '@/app/actions/messages';
-import { getInterpretationsByMessage, getGradingByInterpretation } from '@/app/actions/interpretations';
+import { getInterpretationsByMessage, getGradingByInterpretation, getArbitrationByInterpretation } from '@/app/actions/interpretations';
 import { requiresInterpretation } from '@/lib/character-validation';
 import { canRespondToMessage } from '@/lib/message-status';
 import Button from '@/app/components/ui/Button';
@@ -91,7 +91,14 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
           const latestInterpretation = interpretations[0];
           const grading = await getGradingByInterpretation(latestInterpretation.id);
           if (grading) {
-            interpretationStatus = grading.status;
+            // Check if there's an arbitration that overrides the grading
+            const arbitration = await getArbitrationByInterpretation(latestInterpretation.id);
+            if (arbitration) {
+              // Arbitration result overrides grading status
+              interpretationStatus = arbitration.result === 'accept' ? 'accepted' : 'rejected';
+            } else {
+              interpretationStatus = grading.status;
+            }
           }
         }
       }

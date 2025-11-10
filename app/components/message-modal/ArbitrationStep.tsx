@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Card from '@/app/components/ui/Card';
 import Badge from '@/app/components/ui/Badge';
+import { getUserById } from '@/app/actions/users';
 import type { Message, Interpretation, InterpretationGrading, InterpretationGradingResponse, Arbitration } from '@/types/entities';
 
 export interface ArbitrationStepProps {
@@ -27,6 +28,21 @@ const ArbitrationStep: React.FC<ArbitrationStepProps> = ({
 }) => {
   const isAccepted = arbitration.result === 'accept';
   const wasDisputed = !!gradingResponse;
+  const [authorName, setAuthorName] = useState<string>('Author');
+  const [interpreterName, setInterpreterName] = useState<string>('Interpreter');
+
+  useEffect(() => {
+    // Load author and interpreter names
+    const loadNames = async () => {
+      const author = await getUserById(message.userId);
+      const interpreter = await getUserById(interpretation.userId);
+      
+      if (author) setAuthorName(author.name);
+      if (interpreter) setInterpreterName(interpreter.name);
+    };
+    
+    loadNames();
+  }, [message.userId, interpretation.userId]);
 
   return (
     <div className="space-y-6">
@@ -120,7 +136,7 @@ const ArbitrationStep: React.FC<ArbitrationStepProps> = ({
         <Card variant="elevated" padding="lg">
           <div className="mb-3">
             <h4 className="text-sm font-medium text-red-700 dark:text-red-400 uppercase tracking-wide">
-              Author's Rejection Feedback
+              Author's Rejection Feedback ({authorName})
             </h4>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
@@ -136,7 +152,7 @@ const ArbitrationStep: React.FC<ArbitrationStepProps> = ({
         <Card variant="elevated" padding="lg">
           <div className="mb-3">
             <h4 className="text-sm font-medium text-blue-700 dark:text-blue-400 uppercase tracking-wide">
-              Interpreter's Dispute
+              Interpreter's Dispute ({interpreterName})
             </h4>
           </div>
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">

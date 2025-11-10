@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '@/app/components/ui/Card';
 import Button from '@/app/components/ui/Button';
 import Badge from '@/app/components/ui/Badge';
 import Textarea from '@/app/components/ui/Textarea';
 import { createGradingResponse } from '@/app/actions/interpretations';
+import { getUserById } from '@/app/actions/users';
 import type { Message, Interpretation, InterpretationGrading, Arbitration } from '@/types/entities';
 
 export interface RejectedInterpretationStepProps {
@@ -35,10 +36,21 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
   const [disputeText, setDisputeText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authorName, setAuthorName] = useState<string>('Author');
 
   const remainingAttempts = maxAttempts - interpretation.attemptNumber;
   const hasAttemptsRemaining = remainingAttempts > 0;
   const hasArbitration = !!arbitration;
+
+  useEffect(() => {
+    // Load author name
+    const loadAuthorName = async () => {
+      const author = await getUserById(message.userId);
+      if (author) setAuthorName(author.name);
+    };
+    
+    loadAuthorName();
+  }, [message.userId]);
 
   // Handle dispute submission
   const handleSubmitDispute = async () => {
@@ -160,7 +172,7 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
         <Card variant="elevated" padding="lg">
           <div className="mb-3">
             <h4 className="text-sm font-medium text-red-700 dark:text-red-400 uppercase tracking-wide">
-              Author's Feedback
+              Author's Feedback ({authorName})
             </h4>
           </div>
           <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">

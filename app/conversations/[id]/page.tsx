@@ -10,7 +10,7 @@ import MessageModal from '@/app/components/modals/MessageModal';
 import { useConversations } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getConversationMessages } from '@/app/actions/messages';
-import { getInterpretationsByMessage, getGradingByInterpretation } from '@/app/actions/interpretations';
+import { getInterpretationsByMessage, getGradingByInterpretation, getArbitrationByInterpretation } from '@/app/actions/interpretations';
 import { getUserById as getUserByIdAction } from '@/app/actions/users';
 import { addParticipation, isUserParticipating } from '@/app/actions/participations';
 import { getMessageStatus } from '@/lib/message-status';
@@ -101,7 +101,14 @@ export default function ConversationPage({ params }: ConversationPageProps) {
               const latestInterpretation = interpretations[0];
               const grading = await getGradingByInterpretation(latestInterpretation.id);
               if (grading) {
-                interpretationStatus = grading.status;
+                // Check if there's an arbitration that overrides the grading
+                const arbitration = await getArbitrationByInterpretation(latestInterpretation.id);
+                if (arbitration) {
+                  // Arbitration result overrides grading status
+                  interpretationStatus = arbitration.result === 'accept' ? 'accepted' : 'rejected';
+                } else {
+                  interpretationStatus = grading.status;
+                }
               }
             }
           }
