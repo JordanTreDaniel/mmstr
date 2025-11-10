@@ -6,13 +6,14 @@ import Button from '@/app/components/ui/Button';
 import Badge from '@/app/components/ui/Badge';
 import Textarea from '@/app/components/ui/Textarea';
 import { createGradingResponse } from '@/app/actions/interpretations';
-import type { Message, Interpretation, InterpretationGrading } from '@/types/entities';
+import type { Message, Interpretation, InterpretationGrading, Arbitration } from '@/types/entities';
 
 export interface RejectedInterpretationStepProps {
   message: Message;
   interpretation: Interpretation;
   grading: InterpretationGrading;
   maxAttempts: number;
+  arbitration?: Arbitration | null; // Optional arbitration result
   onTryAgain: () => void;
   onDisputeSubmitted: () => void;
 }
@@ -26,6 +27,7 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
   interpretation,
   grading,
   maxAttempts,
+  arbitration,
   onTryAgain,
   onDisputeSubmitted,
 }) => {
@@ -36,6 +38,7 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
 
   const remainingAttempts = maxAttempts - interpretation.attemptNumber;
   const hasAttemptsRemaining = remainingAttempts > 0;
+  const hasArbitration = !!arbitration;
 
   // Handle dispute submission
   const handleSubmitDispute = async () => {
@@ -61,12 +64,12 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div className="text-center">
-        <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">
-          Interpretation Rejected
+        <h3 className={`text-lg font-semibold mb-2 ${hasArbitration ? 'text-purple-600 dark:text-purple-400' : 'text-red-600 dark:text-red-400'}`}>
+          {hasArbitration ? 'Arbitration Decision' : 'Interpretation Rejected'}
         </h3>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Attempt <span className="font-semibold">{interpretation.attemptNumber}</span> of {maxAttempts}
-          {hasAttemptsRemaining && (
+          {hasAttemptsRemaining && !hasArbitration && (
             <span className="ml-2 text-green-600 dark:text-green-400">
               ({remainingAttempts} attempt{remainingAttempts !== 1 ? 's' : ''} remaining)
             </span>
@@ -74,9 +77,13 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
         </p>
       </div>
 
-      {/* Rejection Status Badge */}
+      {/* Rejection/Arbitration Status Badge */}
       <div className="flex justify-center">
-        {hasAttemptsRemaining ? (
+        {hasArbitration ? (
+          <Badge variant={arbitration.result === 'accept' ? 'success' : 'error'} size="lg">
+            {arbitration.result === 'accept' ? '✓ Accepted by Arbitration' : '✗ Rejected by Arbitration'}
+          </Badge>
+        ) : hasAttemptsRemaining ? (
           <Badge variant="warning" size="lg">
             ⚠️ Can Try Again
           </Badge>
@@ -86,6 +93,22 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
           </Badge>
         )}
       </div>
+
+      {/* Arbitration Explanation */}
+      {hasArbitration && (
+        <Card variant="elevated" padding="lg">
+          <div className="mb-3">
+            <h4 className="text-sm font-medium text-purple-700 dark:text-purple-400 uppercase tracking-wide">
+              ⚖️ Arbitration Explanation
+            </h4>
+          </div>
+          <div className={`rounded-lg p-4 ${arbitration.result === 'accept' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+            <p className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${arbitration.result === 'accept' ? 'text-green-900 dark:text-green-100' : 'text-red-900 dark:text-red-100'}`}>
+              {arbitration.explanation}
+            </p>
+          </div>
+        </Card>
+      )}
 
       {/* Similarity Score */}
       <Card variant="elevated" padding="md">
@@ -149,7 +172,26 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
       )}
 
       {/* Action Buttons or Dispute Form */}
-      {!showDisputeForm ? (
+      {hasArbitration ? (
+        <div className="space-y-4">
+          {/* Arbitration Complete - Show final status */}
+          <Card variant="elevated" padding="md">
+            <div className={`rounded-lg p-4 ${arbitration.result === 'accept' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
+              <p className={`text-sm ${arbitration.result === 'accept' ? 'text-green-800 dark:text-green-200' : 'text-blue-800 dark:text-blue-200'}`}>
+                {arbitration.result === 'accept' ? (
+                  <>
+                    ✓ <strong>Arbitration Complete:</strong> Your interpretation has been accepted. You can now respond to this message.
+                  </>
+                ) : (
+                  <>
+                    ℹ️ <strong>Arbitration Complete:</strong> The arbitration has concluded. The original rejection stands.
+                  </>
+                )}
+              </p>
+            </div>
+          </Card>
+        </div>
+      ) : !showDisputeForm ? (
         <div className="space-y-4">
           {/* Action buttons */}
           {hasAttemptsRemaining ? (

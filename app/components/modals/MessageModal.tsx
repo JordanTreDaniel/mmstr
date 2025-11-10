@@ -11,8 +11,8 @@ import ViewOriginalStep from '@/app/components/message-modal/ViewOriginalStep';
 import SubmitInterpretationStep from '@/app/components/message-modal/SubmitInterpretationStep';
 import ReviewInterpretationStep from '@/app/components/message-modal/ReviewInterpretationStep';
 import RejectedInterpretationStep from '@/app/components/message-modal/RejectedInterpretationStep';
-import { getGradingByInterpretation } from '@/app/actions/interpretations';
-import type { Message, Interpretation, InterpretationGrading, Convo } from '@/types/entities';
+import { getGradingByInterpretation, getArbitrationByInterpretation } from '@/app/actions/interpretations';
+import type { Message, Interpretation, InterpretationGrading, Convo, Arbitration } from '@/types/entities';
 
 export interface MessageModalProps {
   isOpen: boolean;
@@ -53,6 +53,7 @@ function determineViewState(
   message: Message | null,
   interpretations: Interpretation[],
   gradings: Map<string, InterpretationGrading>,
+  arbitrations: Map<string, Arbitration>,
   currentUserId: number | null
 ): 'view' | 'submit' | 'review' | 'rejected' {
   if (!message || !currentUserId) return 'view';
@@ -82,9 +83,15 @@ function determineViewState(
   // Get the latest interpretation
   const latestInterpretation = userInterpretations[0]; // Already sorted by attempt_number DESC
   const latestGrading = gradings.get(latestInterpretation.id);
+  const latestArbitration = arbitrations.get(latestInterpretation.id);
   
-  // Check if latest interpretation was rejected
+  // Check if latest interpretation was rejected (and not accepted by arbitration)
   if (latestGrading && latestGrading.status === 'rejected') {
+    // If arbitration exists and accepted, treat as accepted
+    if (latestArbitration && latestArbitration.result === 'accept') {
+      return 'view';
+    }
+    // Otherwise show rejected view
     return 'rejected';
   }
   
@@ -102,6 +109,7 @@ const MessageModal: React.FC<MessageModalProps> = ({
   const [convo, setConvo] = useState<Convo | null>(null);
   const [interpretations, setInterpretations] = useState<Interpretation[]>([]);
   const [gradings, setGradings] = useState<Map<string, InterpretationGrading>>(new Map());
+  const [arbitrations, setArbitrations] = useState<Map<string, Arbitration>>(new Map());
   const [authorName, setAuthorName] = useState<string>('Loading...');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,15 +143,23 @@ const MessageModal: React.FC<MessageModalProps> = ({
       const interps = await getInterpretationsByMessage(messageId);
       setInterpretations(interps);
       
-      // Load gradings for all interpretations
+      // Load gradings and arbitrations for all interpretations
       const gradingsMap = new Map<string, InterpretationGrading>();
+      const arbitrationsMap = new Map<string, Arbitration>();
       for (const interp of interps) {
         const grading = await getGradingByInterpretation(interp.id);
         if (grading) {
           gradingsMap.set(interp.id, grading);
         }
+        
+        // Load arbitration if exists
+        const arbitration = await getArbitrationByInterpretation(interp.id);
+        if (arbitration) {
+          arbitrationsMap.set(interp.id, arbitration);
+        }
       }
       setGradings(gradingsMap);
+      setArbitrations(arbitrationsMap);
     } catch (err) {
       console.error('Error loading message data:', err);
       setError('Failed to load message data');
@@ -161,7 +177,7 @@ const MessageModal: React.FC<MessageModalProps> = ({
   }, [isOpen, messageId, loadMessageData]);
 
   // Determine the current view state
-  const viewState = determineViewState(message, interpretations, gradings, currentUserId);
+  const viewState = determineViewState(message, interpretations, gradings, arbitrations, currentUserId);
   
   // Get the first pending interpretation for review (if author)
   const pendingInterpretationForReview = message && currentUserId && message.userId === currentUserId
@@ -251,6 +267,7 @@ const MessageModal: React.FC<MessageModalProps> = ({
                 interpretation={rejectedInterpretation}
                 grading={gradings.get(rejectedInterpretation.id)!}
                 maxAttempts={convo.maxAttempts}
+                arbitration={arbitrations.get(rejectedInterpretation.id)}
                 onTryAgain={handleTryAgain}
                 onDisputeSubmitted={handleDisputeSubmitted}
               />
@@ -319,27 +336,44 @@ const MessageModal: React.FC<MessageModalProps> = ({
                     <div className="space-y-3">
                       {interpretations.map((interp) => {
                         const grading = gradings.get(interp.id);
+                        const arbitration = arbitrations.get(interp.id);
                         const isCurrentUser = interp.userId === currentUserId;
                         const isAuthor = message.userId === currentUserId;
+                        
+                        // Determine display status based on arbitration or grading
+                        const displayStatus = arbitration 
+                          ? (arbitration.result === 'accept' ? 'accepted' : 'rejected')
+                          : grading?.status;
                         
                         return (
                           <div
                             key={interp.id}
                             className={`rounded-lg border p-4 ${
-                              grading?.status === 'accepted'
+                              displayStatus === 'accepted'
                                 ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20'
-                                : grading?.status === 'rejected'
+                                : displayStatus === 'rejected'
                                 ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20'
                                 : 'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900'
                             }`}
                           >
                             {/* Interpretation Header */}
                             <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                                   {isCurrentUser ? 'Your Interpretation' : `Interpretation ${interp.attemptNumber}`}
                                 </span>
-                                {grading && (
+                                {arbitration && (
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                      arbitration.result === 'accept'
+                                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                        : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                                    }`}
+                                  >
+                                    ⚖️ {arbitration.result === 'accept' ? 'Accepted (Arbitrated)' : 'Rejected (Arbitrated)'}
+                                  </span>
+                                )}
+                                {grading && !arbitration && (
                                   <span
                                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                       grading.status === 'accepted'
@@ -369,8 +403,20 @@ const MessageModal: React.FC<MessageModalProps> = ({
                               {interp.text}
                             </p>
 
-                            {/* Feedback Notes (if any) */}
-                            {grading?.notes && (
+                            {/* Arbitration Explanation (if any) */}
+                            {arbitration && (
+                              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                <p className="text-xs font-medium text-purple-600 dark:text-purple-400 mb-1">
+                                  ⚖️ Arbitration Explanation:
+                                </p>
+                                <p className="text-xs text-gray-700 dark:text-gray-300 italic">
+                                  {arbitration.explanation}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Feedback Notes (if any and no arbitration) */}
+                            {grading?.notes && !arbitration && (
                               <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
                                   {isAuthor ? 'Your Feedback:' : 'Author Feedback:'}
@@ -414,9 +460,31 @@ const MessageModal: React.FC<MessageModalProps> = ({
                         const userInterps = interpretations.filter(i => i.userId === currentUserId);
                         const latestInterp = userInterps[0];
                         const latestGrading = latestInterp ? gradings.get(latestInterp.id) : null;
+                        const latestArbitration = latestInterp ? arbitrations.get(latestInterp.id) : null;
                         
                         if (!latestInterp) {
                           return null; // Should not reach here as 'submit' state would handle it
+                        }
+                        
+                        // Check if arbitration exists
+                        if (latestArbitration) {
+                          if (latestArbitration.result === 'accept') {
+                            return (
+                              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                                <p className="text-sm text-green-800 dark:text-green-200">
+                                  ✓ Your interpretation was accepted by arbitration! You can now respond to this message.
+                                </p>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                                <p className="text-sm text-red-800 dark:text-red-200">
+                                  ⚖️ Your interpretation was reviewed by arbitration and the rejection stands.
+                                </p>
+                              </div>
+                            );
+                          }
                         }
                         
                         if (latestGrading?.status === 'accepted') {
