@@ -7,6 +7,7 @@ import { getInterpretationsByMessage } from '@/app/actions/interpretations';
 import { getUserById } from '@/app/actions/users';
 import { requiresInterpretation } from '@/lib/character-validation';
 import ViewOriginalStep from '@/app/components/message-modal/ViewOriginalStep';
+import SubmitInterpretationStep from '@/app/components/message-modal/SubmitInterpretationStep';
 import type { Message, Interpretation } from '@/types/entities';
 
 export interface MessageModalProps {
@@ -137,6 +138,15 @@ const MessageModal: React.FC<MessageModalProps> = ({
     setCurrentStep('submit-interpretation');
   };
 
+  // Handle interpretation submission
+  const handleInterpretationSubmitted = async () => {
+    // Reload message data to get updated interpretations
+    await loadMessageData();
+    // Reset to view mode or show success message
+    // For now, just close the modal
+    onClose();
+  };
+
   // Create modal title with author name and timestamp
   const modalTitle = message
     ? `${authorName} • ${formatTimestamp(message.createdAt)}`
@@ -176,13 +186,14 @@ const MessageModal: React.FC<MessageModalProps> = ({
                 message={message}
                 onStartInterpreting={handleStartInterpreting}
               />
-            ) : viewState === 'submit' && currentStep === 'submit-interpretation' ? (
-              // Step 2: Submit Interpretation Form (to be implemented in task 6.3)
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  💡 Interpretation submission form will be implemented in task 6.3
-                </p>
-              </div>
+            ) : viewState === 'submit' && currentStep === 'submit-interpretation' && currentUserId ? (
+              // Step 2: Submit Interpretation Form
+              <SubmitInterpretationStep
+                message={message}
+                currentUserId={currentUserId}
+                attemptNumber={interpretations.filter(i => i.userId === currentUserId).length + 1}
+                onInterpretationSubmitted={handleInterpretationSubmitted}
+              />
             ) : viewState === 'submit' && !needsInterpretation ? (
               // Message doesn't require interpretation (too short)
               <div className="space-y-4">
