@@ -28,14 +28,14 @@ export interface MessageListProps {
 export function MessageList({ messages, currentUserId, onMessageClick }: MessageListProps) {
   if (messages.length === 0) {
     return (
-      <div className="flex items-center justify-center py-12 text-gray-500 dark:text-gray-400">
-        <p>No messages yet. Start the conversation!</p>
+      <div className="flex items-center justify-center py-8 sm:py-12 text-gray-500 dark:text-gray-400">
+        <p className="text-sm sm:text-base px-4 text-center">No messages yet. Start the conversation!</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {messages.map(({ message, userName, status, replyingToSnippet }) => (
         <MessageCard
           key={message.id}

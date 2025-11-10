@@ -29,7 +29,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       none: '',
       sm: 'p-3',
       md: 'p-4',
-      lg: 'p-6',
+      lg: 'p-4 sm:p-6',
     };
     
     const hoverStyles = hoverable 

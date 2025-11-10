@@ -225,7 +225,7 @@ const MessageModal: React.FC<MessageModalProps> = ({
       closeOnBackdropClick={true}
       closeOnEscape={true}
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Loading State */}
         {loading && (
           <div className="text-center py-8">
@@ -297,14 +297,14 @@ const MessageModal: React.FC<MessageModalProps> = ({
               />
             ) : (
               // Default view - Show message details and interpretation history
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Original Message */}
                 <div>
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                  <h3 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                     Original Message
                   </h3>
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                    <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words leading-relaxed">
+                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 sm:p-4">
+                    <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words leading-relaxed">
                       {message.text}
                     </p>
                   </div>
@@ -313,10 +313,10 @@ const MessageModal: React.FC<MessageModalProps> = ({
                 {/* Interpretations Section */}
                 {interpretations.length > 0 && (
                   <div>
-                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
+                    <h3 className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2 sm:mb-3">
                       Interpretations
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       {interpretations.map((interp) => {
                         const grading = gradings.get(interp.id);
                         const isCurrentUser = interp.userId === currentUserId;

@@ -46,14 +46,14 @@ const ConversationWelcomeModal: React.FC<ConversationWelcomeModalProps> = ({
       closeOnBackdropClick={true}
       closeOnEscape={true}
     >
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Success Message */}
         <div className="text-center">
-          <div className="text-4xl mb-4">✨</div>
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">✨</div>
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
             {conversationTitle}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
             {isCreator 
               ? "Your conversation is ready! Share the link below to invite others."
               : "You've joined this conversation. Share the link to invite others."}
@@ -61,8 +61,8 @@ const ConversationWelcomeModal: React.FC<ConversationWelcomeModalProps> = ({
         </div>
 
         {/* Shareable URL */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <div className="space-y-2 sm:space-y-3">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
             Shareable Link
           </label>
           <div className="flex gap-2">
@@ -136,7 +136,7 @@ const ConversationWelcomeModal: React.FC<ConversationWelcomeModalProps> = ({
             </svg>
             How MMSTR Works
           </h4>
-          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-7">
+          <ul className="text-xs sm:text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-5 sm:ml-7">
             <li>• Before responding to a message, you must interpret it</li>
             <li>• The author grades your interpretation for accuracy</li>
             <li>• Only after approval can you post your response</li>
