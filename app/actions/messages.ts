@@ -3,7 +3,7 @@
 import { client } from '@/lib/db';
 import type { Message } from '@/types/entities';
 import { v4 as uuidv4 } from 'uuid';
-import { ensureUser, getUserById } from './users';
+import { getUserById } from './users';
 import { addParticipation } from './participations';
 
 /**
@@ -18,7 +18,7 @@ const MESSAGE_MAX_LENGTH = 280;
  */
 export async function createMessage(
   text: string,
-  userId: string,
+  userId: number,
   convoId: string,
   replyingToMessageId?: string | null
 ): Promise<Message | null> {
@@ -69,7 +69,7 @@ export async function getConversationMessages(convoId: string): Promise<Message[
   return result.rows.map(row => ({
     id: row.id as string,
     text: row.text as string,
-    userId: row.user_id as string,
+    userId: Number(row.user_id),
     convoId: row.convo_id as string,
     replyingToMessageId: row.replying_to_message_id as string | null,
     createdAt: row.created_at as string,
@@ -91,7 +91,7 @@ export async function getMessageById(id: string): Promise<Message | null> {
   return {
     id: row.id as string,
     text: row.text as string,
-    userId: row.user_id as string,
+    userId: Number(row.user_id),
     convoId: row.convo_id as string,
     replyingToMessageId: row.replying_to_message_id as string | null,
     createdAt: row.created_at as string,

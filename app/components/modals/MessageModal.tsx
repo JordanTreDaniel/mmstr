@@ -18,7 +18,7 @@ export interface MessageModalProps {
   isOpen: boolean;
   onClose: () => void;
   messageId: string | null;
-  currentUserId: string | null;
+  currentUserId: number | null;
 }
 
 /**
@@ -53,7 +53,7 @@ function determineViewState(
   message: Message | null,
   interpretations: Interpretation[],
   gradings: Map<string, InterpretationGrading>,
-  currentUserId: string | null
+  currentUserId: number | null
 ): 'view' | 'submit' | 'review' | 'rejected' {
   if (!message || !currentUserId) return 'view';
   
@@ -295,32 +295,152 @@ const MessageModal: React.FC<MessageModalProps> = ({
                 }}
               />
             ) : (
-              // Default view for authors and others
-              <div>
+              // Default view - Show message details and interpretation history
+              <div className="space-y-6">
                 {/* Original Message */}
-                <div className="mb-6">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                     Original Message
                   </h3>
                   <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                    <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+                    <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words leading-relaxed">
                       {message.text}
                     </p>
                   </div>
                 </div>
 
-                {/* View State Information (Temporary - for debugging) */}
-                <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-4 border-t border-gray-200 dark:border-gray-700">
-                  <p>Current View State: <strong>{viewState}</strong></p>
-                  <p className="mt-1">Interpretations: {interpretations.length}</p>
-                </div>
+                {/* Interpretations Section */}
+                {interpretations.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
+                      Interpretations
+                    </h3>
+                    <div className="space-y-3">
+                      {interpretations.map((interp) => {
+                        const grading = gradings.get(interp.id);
+                        const isCurrentUser = interp.userId === currentUserId;
+                        const isAuthor = message.userId === currentUserId;
+                        
+                        return (
+                          <div
+                            key={interp.id}
+                            className={`rounded-lg border p-4 ${
+                              grading?.status === 'accepted'
+                                ? 'border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20'
+                                : grading?.status === 'rejected'
+                                ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20'
+                                : 'border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-900'
+                            }`}
+                          >
+                            {/* Interpretation Header */}
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  {isCurrentUser ? 'Your Interpretation' : `Interpretation ${interp.attemptNumber}`}
+                                </span>
+                                {grading && (
+                                  <span
+                                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                      grading.status === 'accepted'
+                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                        : grading.status === 'rejected'
+                                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                        : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                    }`}
+                                  >
+                                    {grading.status === 'accepted'
+                                      ? '✓ Accepted'
+                                      : grading.status === 'rejected'
+                                      ? '✗ Rejected'
+                                      : '⏳ Pending Review'}
+                                  </span>
+                                )}
+                              </div>
+                              {grading && (
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                  {grading.similarityScore}% similarity
+                                </span>
+                              )}
+                            </div>
 
-                {/* TODO: Other step views will be implemented in future tasks (6.7+) */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    💡 Additional views (rejected interpretations, arbitration) will be implemented in upcoming tasks.
-                  </p>
-                </div>
+                            {/* Interpretation Text */}
+                            <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words mb-2">
+                              {interp.text}
+                            </p>
+
+                            {/* Feedback Notes (if any) */}
+                            {grading?.notes && (
+                              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                                  {isAuthor ? 'Your Feedback:' : 'Author Feedback:'}
+                                </p>
+                                <p className="text-xs text-gray-700 dark:text-gray-300 italic">
+                                  {grading.notes}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Status Message for Users */}
+                {currentUserId && (
+                  <div>
+                    {message.userId === currentUserId ? (
+                      // Author view
+                      interpretations.length === 0 ? (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                          <p className="text-sm text-blue-800 dark:text-blue-200">
+                            💬 Waiting for others to interpret your message before they can respond.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                          <p className="text-sm text-green-800 dark:text-green-200">
+                            ✓ {interpretations.filter(i => gradings.get(i.id)?.status === 'accepted').length} interpretation(s) accepted. 
+                            {interpretations.filter(i => gradings.get(i.id)?.status === 'pending').length > 0 &&
+                              ` ${interpretations.filter(i => gradings.get(i.id)?.status === 'pending').length} pending review.`
+                            }
+                          </p>
+                        </div>
+                      )
+                    ) : (
+                      // Interpreter view
+                      (() => {
+                        const userInterps = interpretations.filter(i => i.userId === currentUserId);
+                        const latestInterp = userInterps[0];
+                        const latestGrading = latestInterp ? gradings.get(latestInterp.id) : null;
+                        
+                        if (!latestInterp) {
+                          return null; // Should not reach here as 'submit' state would handle it
+                        }
+                        
+                        if (latestGrading?.status === 'accepted') {
+                          return (
+                            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                              <p className="text-sm text-green-800 dark:text-green-200">
+                                ✓ Your interpretation was accepted! You can now respond to this message.
+                              </p>
+                            </div>
+                          );
+                        } else if (latestGrading?.status === 'pending') {
+                          return (
+                            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                ⏳ Your interpretation is pending review by the author.
+                              </p>
+                            </div>
+                          );
+                        }
+                        
+                        return null;
+                      })()
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

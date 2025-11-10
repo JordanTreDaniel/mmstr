@@ -44,7 +44,7 @@ export async function initializeDatabase() {
   // Execute each CREATE TABLE statement separately
   await db.execute(`
     CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       created_at TEXT NOT NULL
     )
@@ -64,10 +64,11 @@ export async function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS messages (
       id TEXT PRIMARY KEY,
       text TEXT NOT NULL,
-      user_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
       convo_id TEXT NOT NULL,
       replying_to_message_id TEXT,
       created_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (convo_id) REFERENCES convos(id)
     )
   `);
@@ -95,11 +96,12 @@ export async function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS interpretations (
       id TEXT PRIMARY KEY,
       message_id TEXT NOT NULL,
-      user_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
       text TEXT NOT NULL,
       attempt_number INTEGER NOT NULL,
       created_at TEXT NOT NULL,
-      FOREIGN KEY (message_id) REFERENCES messages(id)
+      FOREIGN KEY (message_id) REFERENCES messages(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
 
@@ -144,9 +146,10 @@ export async function initializeDatabase() {
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS participations (
-      user_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
       convo_id TEXT NOT NULL,
       PRIMARY KEY (user_id, convo_id),
+      FOREIGN KEY (user_id) REFERENCES users(id),
       FOREIGN KEY (convo_id) REFERENCES convos(id)
     )
   `);

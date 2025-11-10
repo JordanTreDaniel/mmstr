@@ -1,17 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/app/components/ui/Button';
 import Card from '@/app/components/ui/Card';
+import Modal from '@/app/components/ui/Modal';
 import { Header, PageContainer } from '@/app/components/layout';
 import CreateConvoModal from '@/app/components/modals/CreateConvoModal';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import { getConversationById } from '@/app/actions/convos';
 
 export default function Home() {
   const router = useRouter();
-  const { currentUser } = useCurrentUser();
+  const searchParams = useSearchParams();
+  const joinConvoId = searchParams.get('join');
+  const { currentUser, createUser, allUsers } = useCurrentUser();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
+  const [joiningConvo, setJoiningConvo] = useState<{ id: string; title: string; } | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
 
   const handleNewConversation = () => {
     setIsCreateModalOpen(true);
@@ -26,11 +33,58 @@ export default function Home() {
     router.push('/conversations');
   };
 
+  // Track if component is mounted to prevent hydration mismatch
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Handle conversation invitation
+  useEffect(() => {
+    async function handleJoinInvitation() {
+      if (joinConvoId && !currentUser && isMounted) {
+        // Fetch conversation details
+        try {
+          const convo = await getConversationById(joinConvoId);
+          if (convo) {
+            setJoiningConvo({ id: convo.id, title: convo.title });
+            setIsJoinModalOpen(true);
+          }
+        } catch (error) {
+          console.error('Failed to fetch conversation:', error);
+        }
+      }
+    }
+    handleJoinInvitation();
+  }, [joinConvoId, currentUser, isMounted]);
+
+  const handleJoinDiscussion = async () => {
+    if (!joiningConvo) return;
+
+    setIsJoining(true);
+    try {
+      // Create user if they don't have one
+      const userCount = allUsers.length + 1;
+      const userName = `User ${userCount}`;
+
+      console.log('Creating user to join conversation:', userName);
+      await createUser(userName);
+
+      // Redirect to conversation
+      router.push(`/conversations/${joiningConvo.id}`);
+    } catch (error) {
+      console.error('Failed to join conversation:', error);
+      alert('Failed to join conversation. Please try again.');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
       <Header
         rightContent={
-          currentUser ? (
+          isMounted && currentUser ? (
             <Button 
               variant="ghost" 
               size="sm"
@@ -153,6 +207,49 @@ export default function Home() {
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={handleConversationCreated}
       />
+
+      {/* Join Conversation Modal */}
+      <Modal
+        isOpen={isJoinModalOpen}
+        onClose={() => !isJoining && setIsJoinModalOpen(false)}
+        title="Join Conversation"
+        size="md"
+        closeOnBackdropClick={!isJoining}
+        closeOnEscape={!isJoining}
+      >
+        <div className="space-y-6">
+          <div className="text-center">
+            <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">
+              You&apos;ve been invited to join:
+            </p>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              {joiningConvo?.title}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Join this MMSTR discussion where every response requires understanding before rebuttal.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsJoinModalOpen(false)}
+              disabled={isJoining}
+            >
+              Not Now
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleJoinDiscussion}
+              disabled={isJoining}
+            >
+              {isJoining ? 'Joining...' : 'Join Discussion'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

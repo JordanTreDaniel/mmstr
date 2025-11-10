@@ -5,7 +5,7 @@
  * Represents a participant in the MMSTR discussion platform
  */
 export interface User {
-  id: string;
+  id: number; // Auto-increment from SQLite
   name: string;
   createdAt: string;
 }
@@ -27,7 +27,7 @@ export interface Convo {
  * Links users to conversations they participate in
  */
 export interface Participation {
-  userId: string;
+  userId: number;
   convoId: string;
 }
 
@@ -38,7 +38,7 @@ export interface Participation {
 export interface Message {
   id: string;
   text: string; // 10-280 characters
-  userId: string;
+  userId: number;
   convoId: string;
   replyingToMessageId: string | null; // null for root messages
   createdAt: string;
@@ -73,7 +73,7 @@ export interface Point {
 export interface Interpretation {
   id: string;
   messageId: string;
-  userId: string;
+  userId: number;
   text: string;
   attemptNumber: number; // 1, 2, or 3 (or custom max)
   createdAt: string;

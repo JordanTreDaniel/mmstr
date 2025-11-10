@@ -24,7 +24,7 @@ export interface MessageComposerProps {
  * Allows users to compose and send messages with reply functionality
  */
 export function MessageComposer({ convoId, messages, onMessageSent }: MessageComposerProps) {
-  const { currentUserId } = useCurrentUser();
+  const { currentUserId, currentUser, createUser, allUsers } = useCurrentUser();
   const [text, setText] = useState('');
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
@@ -104,11 +104,6 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
   }, [replyingToId, currentUserId, messages]);
 
   const handleSend = async () => {
-    if (!currentUserId) {
-      setError('No user logged in');
-      return;
-    }
-    
     if (!canReply) {
       setError(replyBlockReason || 'Cannot reply to this message');
       return;
@@ -129,9 +124,16 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
     setIsSending(true);
 
     try {
+      // Ensure we have a current user - create one if needed
+      let user = currentUser;
+      if (!user) {
+        const userCount = allUsers.length + 1;
+        user = await createUser(`User ${userCount}`);
+      }
+
       const newMessage = await createMessage(
         trimmedText,
-        currentUserId,
+        user.id,
         convoId,
         replyingToId
       );
@@ -240,7 +242,7 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
           <Button
             variant="primary"
             onClick={handleSend}
-            disabled={!isValid || isSending || !currentUserId || !canReply}
+            disabled={!isValid || isSending || !canReply}
             className="min-w-[100px]"
           >
             {isSending ? 'Sending...' : 'Send'}

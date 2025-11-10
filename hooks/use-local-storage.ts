@@ -5,6 +5,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getItem, setItem, removeItem } from '@/lib/storage';
+import { STORAGE_KEYS } from '@/lib/storage-keys';
+
+/**
+ * Validate if a value is a valid user ID
+ * User IDs must be positive integers (SQLite AUTOINCREMENT starts at 1)
+ */
+function isValidUserId(value: unknown): boolean {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  
+  const num = Number(value);
+  return Number.isInteger(num) && num > 0;
+}
 
 /**
  * Hook that syncs React state with localStorage
@@ -25,6 +39,16 @@ export function useLocalStorage<T>(
 
     try {
       const item = getItem<T>(key);
+      
+      // Special validation for user ID
+      if (key === STORAGE_KEYS.CURRENT_USER_ID && item !== null) {
+        if (!isValidUserId(item)) {
+          console.warn(`Invalid user ID found in localStorage: ${item}. Clearing it.`);
+          removeItem(key);
+          return initialValue;
+        }
+      }
+      
       return item !== null ? item : initialValue;
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
@@ -39,6 +63,14 @@ export function useLocalStorage<T>(
       try {
         // Allow value to be a function so we have same API as useState
         const valueToStore = value instanceof Function ? value(storedValue) : value;
+        
+        // Special validation for user ID - reject invalid values
+        if (key === STORAGE_KEYS.CURRENT_USER_ID && valueToStore !== null) {
+          if (!isValidUserId(valueToStore)) {
+            console.error(`Attempted to store invalid user ID: ${valueToStore}. Ignoring.`);
+            return; // Don't store invalid user IDs
+          }
+        }
         
         // Save state
         setStoredValue(valueToStore);

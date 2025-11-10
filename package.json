@@ -6,7 +6,9 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:reset": "npx tsx scripts/reset-db.ts",
+    "kill": "npx tsx scripts/reset-db.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.15.15",

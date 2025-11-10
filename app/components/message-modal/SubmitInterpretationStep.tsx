@@ -10,7 +10,7 @@ import type { Message } from '@/types/entities';
 
 export interface SubmitInterpretationStepProps {
   message: Message;
-  currentUserId: string;
+  currentUserId: number;
   attemptNumber: number;
   onInterpretationSubmitted: () => void;
 }

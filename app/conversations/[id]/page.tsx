@@ -26,7 +26,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   const { id } = use(params);
   const router = useRouter();
   const { getConversation } = useConversations();
-  const { currentUserId, getUserById } = useCurrentUser();
+  const { currentUserId, getUserById, loading: userLoading } = useCurrentUser();
   const [conversation, setConversation] = useState<Convo | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [messagesWithMetadata, setMessagesWithMetadata] = useState<MessageWithMetadata[]>([]);
@@ -35,13 +35,24 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Redirect to landing page with invitation if user is not authenticated
   useEffect(() => {
-    loadConversation();
-  }, [id]);
+    if (!userLoading && !currentUserId) {
+      router.push(`/?join=${id}`);
+    }
+  }, [currentUserId, userLoading, id, router]);
 
   useEffect(() => {
-    loadMessages();
-  }, [id]);
+    if (currentUserId) {
+      loadConversation();
+    }
+  }, [id, currentUserId]);
+
+  useEffect(() => {
+    if (currentUserId) {
+      loadMessages();
+    }
+  }, [id, currentUserId]);
 
   const loadConversation = async () => {
     setLoading(true);

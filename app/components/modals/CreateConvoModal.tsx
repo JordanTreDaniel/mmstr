@@ -22,7 +22,7 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
   onSuccess,
 }) => {
   const router = useRouter();
-  const { currentUser } = useCurrentUser();
+  const { currentUser, createUser, allUsers } = useCurrentUser();
   const [title, setTitle] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(20);
   const [maxAttempts, setMaxAttempts] = useState(3);
@@ -39,28 +39,41 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
       return;
     }
 
-    // Ensure we have a current user
-    if (!currentUser) {
-      setTitleError('User not initialized. Please refresh the page.');
-      return;
-    }
-    
     setTitleError('');
     setIsSubmitting(true);
 
     try {
+      // Ensure we have a current user - create one if needed
+      let user = currentUser;
+      if (!user) {
+        // Create a new user (only on explicit action)
+        const userCount = allUsers.length + 1;
+        const userName = `User ${userCount}`;
+
+        console.log('Creating new user:', userName);
+        user = await createUser(userName);
+        console.log('User created successfully:', user);
+      }
+
+      // Validate user has valid ID before proceeding
+      if (!user || !user.id || user.id <= 0) {
+        throw new Error('Invalid user. Please refresh the page and try again.');
+      }
+
       // Create the conversation (user is automatically added as participant)
       const convo = await createConversation(
         title.trim(),
-        currentUser.id,
-        currentUser.name,
+        user.id,
+        user.name,
         maxAttempts,
         maxParticipants
       );
 
+      console.log('Conversation created successfully:', convo);
+
       // Create the first message if provided
       if (firstMessage.trim()) {
-        await createMessage(firstMessage.trim(), currentUser.id, convo.id);
+        await createMessage(firstMessage.trim(), user.id, convo.id);
       }
       
       // Reset form
@@ -79,7 +92,8 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
       router.push(`/conversations/${convo.id}`);
     } catch (error) {
       console.error('Failed to create conversation:', error);
-      setTitleError('Failed to create conversation. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create conversation. Please try again.';
+      setTitleError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

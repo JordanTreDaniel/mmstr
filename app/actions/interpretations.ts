@@ -12,7 +12,7 @@ import { getMessageById } from './messages';
  */
 export async function createInterpretation(
   messageId: string,
-  userId: string,
+  userId: number,
   text: string,
   attemptNumber: number
 ): Promise<Interpretation> {
@@ -30,7 +30,7 @@ export async function createInterpretation(
 /**
  * Get all interpretations for a message, optionally filtered by user
  */
-export async function getInterpretationsByMessage(messageId: string, userId?: string): Promise<Interpretation[]> {
+export async function getInterpretationsByMessage(messageId: string, userId?: number): Promise<Interpretation[]> {
   const sql = userId
     ? 'SELECT * FROM interpretations WHERE message_id = ? AND user_id = ? ORDER BY attempt_number DESC'
     : 'SELECT * FROM interpretations WHERE message_id = ? ORDER BY created_at DESC';
@@ -41,7 +41,7 @@ export async function getInterpretationsByMessage(messageId: string, userId?: st
   return result.rows.map(row => ({
     id: row.id as string,
     messageId: row.message_id as string,
-    userId: row.user_id as string,
+    userId: Number(row.user_id),
     text: row.text as string,
     attemptNumber: row.attempt_number as number,
     createdAt: row.created_at as string,
@@ -63,7 +63,7 @@ export async function getInterpretationById(id: string): Promise<Interpretation 
   return {
     id: row.id as string,
     messageId: row.message_id as string,
-    userId: row.user_id as string,
+    userId: Number(row.user_id),
     text: row.text as string,
     attemptNumber: row.attempt_number as number,
     createdAt: row.created_at as string,

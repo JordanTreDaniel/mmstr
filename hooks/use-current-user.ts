@@ -7,124 +7,140 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocalStorage } from './use-local-storage';
 import { STORAGE_KEYS } from '@/lib/storage-keys';
-import { getItem, setItem } from '@/lib/storage';
 import type { User } from '@/types/entities';
-import { ensureUser } from '@/app/actions/users';
+import { createUser as createUserAction, getUserById as getUserByIdAction, getAllUsers as getAllUsersAction } from '@/app/actions/users';
 
 export interface UseCurrentUserReturn {
   currentUser: User | null;
-  currentUserId: string | null;
+  currentUserId: number | null;
   allUsers: User[];
+  loading: boolean;
   
   // Actions
-  setCurrentUser: (userId: string) => void;
-  createUser: (name: string) => User;
-  switchUser: (userId: string) => void;
+  setCurrentUser: (userId: number) => void;
+  createUser: (name: string) => Promise<User>;
+  switchUser: (userId: number) => void;
   clearCurrentUser: () => void;
-  getUserById: (userId: string) => User | null;
+  getUserById: (userId: number) => User | null;
 }
 
 /**
  * Hook for managing the current user
  */
 export function useCurrentUser(): UseCurrentUserReturn {
-  // Store current user ID in localStorage
-  const [currentUserId, setCurrentUserId, clearUserId] = useLocalStorage<string | null>(
+  // Store current user ID in localStorage (per-device)
+  const [currentUserId, setCurrentUserId, clearUserId] = useLocalStorage<number | null>(
     STORAGE_KEYS.CURRENT_USER_ID,
     null
   );
 
-  // Store all users in localStorage
-  const [allUsers, setAllUsers] = useLocalStorage<User[]>(
-    'mmstr:users',
-    []
-  );
+  // State for users fetched from database
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false); // Prevent race conditions
 
-  // Get current user object
-  const currentUser = allUsers.find(u => u.id === currentUserId) || null;
+  // Load all users from database
+  const loadUsers = useCallback(async () => {
+    try {
+      const users = await getAllUsersAction();
+      
+      // Filter out any corrupted users with invalid IDs
+      const validUsers = users.filter(u => u.id && u.id > 0);
+      
+      if (validUsers.length < users.length) {
+        console.warn(`Found ${users.length - validUsers.length} corrupted user(s) with invalid IDs`);
+      }
+      
+      setAllUsers(validUsers);
+      
+      // Find current user (but don't clear if not found - let user handle it)
+      if (currentUserId) {
+        const user = validUsers.find(u => u.id === currentUserId);
+        setCurrentUser(user || null);
+      } else {
+        setCurrentUser(null);
+      }
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUserId]);
 
-  // Generate unique user ID
-  const generateUserId = useCallback((): string => {
-    const counters = getItem<Record<string, number>>(STORAGE_KEYS.ID_COUNTERS) || {};
-    const currentId = counters['user'] || 0;
-    const nextId = currentId + 1;
+  // Load users on mount and when currentUserId changes
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  // Create a new user in database
+  const createUser = useCallback(async (name: string): Promise<User> => {
+    if (creating) {
+      throw new Error('User creation already in progress');
+    }
     
-    counters['user'] = nextId;
-    setItem(STORAGE_KEYS.ID_COUNTERS, counters);
-    
-    return `user_${nextId}`;
-  }, []);
-
-  // Create a new user
-  const createUser = useCallback((name: string): User => {
-    const newUser: User = {
-      id: generateUserId(),
-      name,
-      createdAt: new Date().toISOString(),
-    };
-
-    setAllUsers(prev => [...prev, newUser]);
-    setCurrentUserId(newUser.id);
-    
-    return newUser;
-  }, [generateUserId, setAllUsers, setCurrentUserId]);
+    setCreating(true);
+    try {
+      const newUser = await createUserAction(name);
+      
+      // Validate the returned user has a valid ID
+      if (!newUser.id || newUser.id <= 0) {
+        throw new Error('Invalid user ID returned from database');
+      }
+      
+      // Set user state immediately
+      setCurrentUserId(newUser.id);
+      setCurrentUser(newUser);
+      
+      // Reload all users from database
+      const users = await getAllUsersAction();
+      const validUsers = users.filter(u => u.id && u.id > 0);
+      setAllUsers(validUsers);
+      
+      return newUser;
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      throw error;
+    } finally {
+      setCreating(false);
+    }
+  }, [creating, setCurrentUserId]);
 
   // Set current user by ID
-  const setCurrentUser = useCallback((userId: string) => {
+  const setCurrentUserById = useCallback((userId: number) => {
     const user = allUsers.find(u => u.id === userId);
     if (user) {
       setCurrentUserId(userId);
+      setCurrentUser(user);
     } else {
       console.error('User not found:', userId);
     }
   }, [allUsers, setCurrentUserId]);
 
   // Switch to a different user
-  const switchUser = useCallback((userId: string) => {
-    setCurrentUser(userId);
-  }, [setCurrentUser]);
+  const switchUser = useCallback((userId: number) => {
+    setCurrentUserById(userId);
+  }, [setCurrentUserById]);
 
   // Clear current user (logout)
   const clearCurrentUser = useCallback(() => {
     clearUserId();
+    setCurrentUser(null);
   }, [clearUserId]);
 
   // Get user by ID
-  const getUserById = useCallback((userId: string): User | null => {
+  const getUserById = useCallback((userId: number): User | null => {
     return allUsers.find(u => u.id === userId) || null;
   }, [allUsers]);
 
-  // Sync current user with database
-  const [isSynced, setIsSynced] = useState(false);
-  
-  useEffect(() => {
-    async function syncUserWithDatabase() {
-      if (currentUser && !isSynced) {
-        try {
-          // Ensure user exists in database
-          await ensureUser(currentUser.id, currentUser.name);
-          setIsSynced(true);
-        } catch (error) {
-          console.error('Failed to sync user with database:', error);
-        }
-      }
-    }
-    
-    syncUserWithDatabase();
-  }, [currentUser, isSynced]);
-
-  // Create a default user if none exists
-  useEffect(() => {
-    if (allUsers.length === 0) {
-      createUser('User 1');
-    }
-  }, []); // Run only once on mount
+  // No auto-initialization - users are created explicitly through actions only
 
   return {
     currentUser,
     currentUserId,
     allUsers,
-    setCurrentUser,
+    loading,
+    setCurrentUser: setCurrentUserById,
     createUser,
     switchUser,
     clearCurrentUser,

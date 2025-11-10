@@ -6,7 +6,7 @@ import type { Participation } from '@/types/entities';
 /**
  * Add a user to a conversation (if not already participating)
  */
-export async function addParticipation(userId: string, convoId: string): Promise<Participation> {
+export async function addParticipation(userId: number, convoId: string): Promise<Participation> {
   // Check if already participating
   const existing = await getParticipation(userId, convoId);
   if (existing) {
@@ -25,7 +25,7 @@ export async function addParticipation(userId: string, convoId: string): Promise
 /**
  * Get a specific participation
  */
-export async function getParticipation(userId: string, convoId: string): Promise<Participation | null> {
+export async function getParticipation(userId: number, convoId: string): Promise<Participation | null> {
   const result = await client.execute({
     sql: 'SELECT * FROM participations WHERE user_id = ? AND convo_id = ?',
     args: [userId, convoId]
@@ -35,7 +35,7 @@ export async function getParticipation(userId: string, convoId: string): Promise
   
   const row = result.rows[0];
   return {
-    userId: row.user_id as string,
+    userId: Number(row.user_id),
     convoId: row.convo_id as string,
   };
 }
@@ -43,7 +43,7 @@ export async function getParticipation(userId: string, convoId: string): Promise
 /**
  * Get all conversations a user is participating in
  */
-export async function getUserParticipations(userId: string): Promise<string[]> {
+export async function getUserParticipations(userId: number): Promise<string[]> {
   const result = await client.execute({
     sql: 'SELECT convo_id FROM participations WHERE user_id = ?',
     args: [userId]
@@ -55,19 +55,19 @@ export async function getUserParticipations(userId: string): Promise<string[]> {
 /**
  * Get all users participating in a conversation
  */
-export async function getConversationParticipants(convoId: string): Promise<string[]> {
+export async function getConversationParticipants(convoId: string): Promise<number[]> {
   const result = await client.execute({
     sql: 'SELECT user_id FROM participations WHERE convo_id = ?',
     args: [convoId]
   });
   
-  return result.rows.map(row => row.user_id as string);
+  return result.rows.map(row => Number(row.user_id));
 }
 
 /**
  * Remove a user from a conversation
  */
-export async function removeParticipation(userId: string, convoId: string): Promise<boolean> {
+export async function removeParticipation(userId: number, convoId: string): Promise<boolean> {
   await client.execute({
     sql: 'DELETE FROM participations WHERE user_id = ? AND convo_id = ?',
     args: [userId, convoId]
@@ -78,7 +78,7 @@ export async function removeParticipation(userId: string, convoId: string): Prom
 /**
  * Check if a user is participating in a conversation
  */
-export async function isUserParticipating(userId: string, convoId: string): Promise<boolean> {
+export async function isUserParticipating(userId: number, convoId: string): Promise<boolean> {
   const participation = await getParticipation(userId, convoId);
   return participation !== null;
 }

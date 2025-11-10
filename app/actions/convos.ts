@@ -3,7 +3,7 @@
 import { client } from '@/lib/db';
 import type { Convo } from '@/types/entities';
 import { v4 as uuidv4 } from 'uuid';
-import { ensureUser } from './users';
+import { getUserById } from './users';
 import { addParticipation } from './participations';
 
 /**
@@ -11,7 +11,7 @@ import { addParticipation } from './participations';
  */
 export async function createConversation(
   title: string,
-  creatorUserId: string,
+  creatorUserId: number,
   creatorUserName: string,
   maxAttempts: number = 3,
   participantLimit: number = 20
@@ -19,8 +19,11 @@ export async function createConversation(
   const id = uuidv4();
   const createdAt = new Date().toISOString();
   
-  // Ensure creator exists in database
-  await ensureUser(creatorUserId, creatorUserName);
+  // Validate creator exists in database
+  const user = await getUserById(creatorUserId);
+  if (!user) {
+    throw new Error(`User with ID ${creatorUserId} not found. Cannot create conversation.`);
+  }
   
   // Create conversation
   await client.execute({
