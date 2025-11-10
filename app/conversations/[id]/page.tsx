@@ -11,6 +11,8 @@ import { useConversations } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getConversationMessages } from '@/app/actions/messages';
 import { getInterpretationsByMessage, getGradingByInterpretation } from '@/app/actions/interpretations';
+import { getUserById as getUserByIdAction } from '@/app/actions/users';
+import { addParticipation, isUserParticipating } from '@/app/actions/participations';
 import { getMessageStatus } from '@/lib/message-status';
 import { requiresInterpretation } from '@/lib/character-validation';
 import type { Convo, Message } from '@/types/entities';
@@ -45,13 +47,43 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   useEffect(() => {
     if (currentUserId) {
       loadConversation();
+      // Automatically add user as participant if not already
+      ensureParticipation();
     }
   }, [id, currentUserId]);
+
+  const ensureParticipation = async () => {
+    if (!currentUserId) return;
+    
+    try {
+      const isParticipating = await isUserParticipating(currentUserId, id);
+      if (!isParticipating) {
+        await addParticipation(currentUserId, id);
+        console.log('User added as participant to conversation');
+      }
+    } catch (error) {
+      console.error('Error ensuring participation:', error);
+    }
+  };
 
   useEffect(() => {
     if (currentUserId) {
       loadMessages();
     }
+  }, [id, currentUserId]);
+
+  // Poll for new messages and interpretations every 10 seconds
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const interval = setInterval(() => {
+      // Only poll if document is visible (user is actively viewing the page)
+      if (document.visibilityState === 'visible') {
+        loadMessages();
+      }
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
   }, [id, currentUserId]);
 
   const loadConversation = async () => {
@@ -81,7 +113,8 @@ export default function ConversationPage({ params }: ConversationPageProps) {
       // Build metadata for each message with full interpretation status
       const withMetadata: MessageWithMetadata[] = await Promise.all(
         msgs.map(async (msg) => {
-          const user = getUserById(msg.userId);
+          // Fetch user from database directly to ensure we have the latest user info
+          const user = await getUserByIdAction(msg.userId);
           const userName = user?.name || 'Unknown User';
           
           const isOwnMessage = msg.userId === currentUserId;
@@ -245,6 +278,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
         <Card variant="elevated" padding="lg">
           <MessageList 
             messages={messagesWithMetadata}
+            currentUserId={currentUserId}
             onMessageClick={(messageId) => {
               setSelectedMessageId(messageId);
               setIsModalOpen(true);
@@ -259,6 +293,10 @@ export default function ConversationPage({ params }: ConversationPageProps) {
               convoId={id}
               messages={messages}
               onMessageSent={loadMessages}
+              onOpenMessageModal={(messageId) => {
+                setSelectedMessageId(messageId);
+                setIsModalOpen(true);
+              }}
             />
           </Card>
         </div>

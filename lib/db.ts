@@ -55,8 +55,10 @@ export async function initializeDatabase() {
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
       created_at TEXT NOT NULL,
+      created_by INTEGER NOT NULL,
       max_attempts INTEGER DEFAULT 3,
-      participant_limit INTEGER DEFAULT 20
+      participant_limit INTEGER DEFAULT 20,
+      FOREIGN KEY (created_by) REFERENCES users(id)
     )
   `);
 

@@ -17,13 +17,15 @@ export interface MessageComposerProps {
   messages: Message[];
   /** Callback when message is successfully sent */
   onMessageSent?: () => void;
+  /** Callback to open message modal for interpretation */
+  onOpenMessageModal?: (messageId: string) => void;
 }
 
 /**
  * MessageComposer component
  * Allows users to compose and send messages with reply functionality
  */
-export function MessageComposer({ convoId, messages, onMessageSent }: MessageComposerProps) {
+export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessageModal }: MessageComposerProps) {
   const { currentUserId, currentUser, createUser, allUsers } = useCurrentUser();
   const [text, setText] = useState('');
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
@@ -31,6 +33,7 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
   const [error, setError] = useState<string | null>(null);
   const [canReply, setCanReply] = useState<boolean>(true);
   const [replyBlockReason, setReplyBlockReason] = useState<string | null>(null);
+  const [isOwnMessage, setIsOwnMessage] = useState<boolean>(false);
 
   // Auto-select most recent message as reply target by default
   useEffect(() => {
@@ -43,6 +46,13 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
   // Check if user can reply to the selected message
   useEffect(() => {
     async function checkReplyPermission() {
+      // If no messages exist, allow writing the first message
+      if (messages.length === 0) {
+        setCanReply(true);
+        setReplyBlockReason(null);
+        return;
+      }
+      
       if (!replyingToId || !currentUserId) {
         setCanReply(false);
         setReplyBlockReason('No message selected');
@@ -56,13 +66,14 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
         return;
       }
       
-      const isOwnMessage = message.userId === currentUserId;
+      const isOwn = message.userId === currentUserId;
+      setIsOwnMessage(isOwn);
       const needsInterpretation = requiresInterpretation(message.text);
       
       // Check interpretation status if needed
       let interpretationStatus: 'pending' | 'accepted' | 'rejected' | undefined = undefined;
       
-      if (!isOwnMessage && needsInterpretation) {
+      if (!isOwn && needsInterpretation) {
         const interpretations = await getInterpretationsByMessage(message.id, currentUserId);
         if (interpretations.length > 0) {
           const latestInterpretation = interpretations[0];
@@ -74,7 +85,7 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
       }
       
       const canRespond = canRespondToMessage({
-        isOwnMessage,
+        isOwnMessage: isOwn,
         requiresInterpretation: needsInterpretation,
         hasInterpretation: interpretationStatus !== undefined,
         interpretationStatus,
@@ -84,7 +95,7 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
       setCanReply(canRespond);
       
       if (!canRespond) {
-        if (isOwnMessage) {
+        if (isOwn) {
           setReplyBlockReason('Cannot reply to your own message');
         } else if (needsInterpretation) {
           if (!interpretationStatus) {
@@ -124,16 +135,15 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
     setIsSending(true);
 
     try {
-      // Ensure we have a current user - create one if needed
-      let user = currentUser;
-      if (!user) {
-        const userCount = allUsers.length + 1;
-        user = await createUser(`User ${userCount}`);
+      // Validate user exists - should be handled by parent component
+      if (!currentUser || !currentUser.id) {
+        setError('You must be logged in to send a message.');
+        return;
       }
 
       const newMessage = await createMessage(
         trimmedText,
-        user.id,
+        currentUser.id,
         convoId,
         replyingToId
       );
@@ -181,6 +191,31 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
   };
 
   const isValid = text.trim().length >= 10 && text.trim().length <= 280;
+
+  // If composer is blocked, show a helpful message instead
+  if (!canReply) {
+    return (
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-6 rounded-b-lg">
+        <div className="text-center space-y-4">
+          <div className="text-gray-700 dark:text-gray-300">
+            <p className="font-medium mb-2">Cannot Reply Yet</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {replyBlockReason || 'You need to complete the required steps before replying.'}
+            </p>
+          </div>
+          {/* Only show Interpret button if it's NOT your own message */}
+          {replyingToId && onOpenMessageModal && !isOwnMessage && (
+            <Button
+              variant="primary"
+              onClick={() => onOpenMessageModal(replyingToId)}
+            >
+              Interpret Message
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 rounded-b-lg">

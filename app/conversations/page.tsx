@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Header, PageContainer } from '@/app/components/layout';
 import Button from '@/app/components/ui/Button';
@@ -12,9 +12,23 @@ import type { Convo } from '@/types/entities';
 
 export default function ConversationsPage() {
   const router = useRouter();
-  const { conversations, loading } = useConversations();
+  const { conversations, loading, refresh } = useConversations();
   const { currentUser } = useCurrentUser();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // Poll for new conversations every 10 seconds
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const interval = setInterval(() => {
+      // Only poll if document is visible (user is actively viewing the page)
+      if (document.visibilityState === 'visible') {
+        refresh();
+      }
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(interval);
+  }, [currentUser, refresh]);
 
   const handleBackClick = () => {
     router.push('/');

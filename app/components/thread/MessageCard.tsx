@@ -17,6 +17,8 @@ export interface MessageCardProps {
   status: MessageStatus;
   /** Reply-to message snippet if this is a reply */
   replyingToSnippet?: string | null;
+  /** Is this message from the current user? */
+  isOwnMessage?: boolean;
   /** Callback when card is clicked */
   onClick?: () => void;
 }
@@ -86,17 +88,19 @@ export function MessageCard({
   userName,
   status,
   replyingToSnippet,
+  isOwnMessage = false,
   onClick,
 }: MessageCardProps) {
   return (
-    <div className="relative">
+    <div className={`relative flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
+      <div className={`${isOwnMessage ? 'max-w-[80%] ml-auto' : 'max-w-[80%] mr-auto'}`}>
       <Card
         variant="default"
         padding="md"
         hoverable
         clickable={!!onClick}
         onClick={onClick}
-        className="relative"
+          className={`relative ${isOwnMessage ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
       >
         {/* Status icon in top-right corner */}
         {status !== 'none' && <StatusIcon status={status} />}
@@ -143,6 +147,7 @@ export function MessageCard({
           {message.text}
         </div>
       </Card>
+      </div>
     </div>
   );
 }

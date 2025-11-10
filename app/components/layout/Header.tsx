@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import Button from '@/app/components/ui/Button';
 
 export interface HeaderProps {
@@ -45,9 +46,12 @@ const Header: React.FC<HeaderProps> = ({
                 <span>Back</span>
               </Button>
             ) : (
-              <div className="text-xl font-bold text-gray-900 dark:text-white">
+              <Link 
+                href="/"
+                className="text-xl font-bold text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300 transition-colors cursor-pointer"
+              >
                 {logo}
-              </div>
+              </Link>
             )}
           </div>
 

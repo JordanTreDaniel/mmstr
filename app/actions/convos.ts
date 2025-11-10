@@ -27,14 +27,14 @@ export async function createConversation(
   
   // Create conversation
   await client.execute({
-    sql: 'INSERT INTO convos (id, title, created_at, max_attempts, participant_limit) VALUES (?, ?, ?, ?, ?)',
-    args: [id, title, createdAt, maxAttempts, participantLimit]
+    sql: 'INSERT INTO convos (id, title, created_at, created_by, max_attempts, participant_limit) VALUES (?, ?, ?, ?, ?, ?)',
+    args: [id, title, createdAt, creatorUserId, maxAttempts, participantLimit]
   });
   
   // Add creator as participant
   await addParticipation(creatorUserId, id);
   
-  return { id, title, createdAt, maxAttempts, participantLimit };
+  return { id, title, createdAt, createdBy: creatorUserId, maxAttempts, participantLimit };
 }
 
 /**
@@ -46,6 +46,7 @@ export async function getConversations(): Promise<Convo[]> {
     id: row.id as string,
     title: row.title as string,
     createdAt: row.created_at as string,
+    createdBy: Number(row.created_by),
     maxAttempts: row.max_attempts as number,
     participantLimit: row.participant_limit as number,
   }));
@@ -67,6 +68,7 @@ export async function getConversationById(id: string): Promise<Convo | null> {
     id: row.id as string,
     title: row.title as string,
     createdAt: row.created_at as string,
+    createdBy: Number(row.created_by),
     maxAttempts: row.max_attempts as number,
     participantLimit: row.participant_limit as number,
   };

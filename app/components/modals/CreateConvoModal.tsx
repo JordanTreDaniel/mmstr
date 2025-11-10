@@ -43,28 +43,16 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Ensure we have a current user - create one if needed
-      let user = currentUser;
-      if (!user) {
-        // Create a new user (only on explicit action)
-        const userCount = allUsers.length + 1;
-        const userName = `User ${userCount}`;
-
-        console.log('Creating new user:', userName);
-        user = await createUser(userName);
-        console.log('User created successfully:', user);
-      }
-
-      // Validate user has valid ID before proceeding
-      if (!user || !user.id || user.id <= 0) {
-        throw new Error('Invalid user. Please refresh the page and try again.');
+      // Validate user exists - should be handled by parent component
+      if (!currentUser || !currentUser.id || currentUser.id <= 0) {
+        throw new Error('You must be logged in to create a conversation.');
       }
 
       // Create the conversation (user is automatically added as participant)
       const convo = await createConversation(
         title.trim(),
-        user.id,
-        user.name,
+        currentUser.id,
+        currentUser.name,
         maxAttempts,
         maxParticipants
       );
@@ -73,7 +61,7 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
 
       // Create the first message if provided
       if (firstMessage.trim()) {
-        await createMessage(firstMessage.trim(), user.id, convo.id);
+        await createMessage(firstMessage.trim(), currentUser.id, convo.id);
       }
       
       // Reset form

@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useLocalStorage } from './use-local-storage';
+import { useCurrentUser } from './use-current-user';
 import {
   getConversations,
   createConversation as createConvoAction,
@@ -22,6 +23,7 @@ import {
   removeParticipation,
   getConversationParticipants,
   isUserParticipating,
+  getUserParticipations,
 } from '@/app/actions/participations';
 import type { Convo, Message, Participation } from '@/types/entities';
 
@@ -56,6 +58,8 @@ export interface UseConversationsReturn {
  * Hook for managing all conversation-related data
  */
 export function useConversations(): UseConversationsReturn {
+  const { currentUserId } = useCurrentUser();
+  
   // Track current conversation ID in localStorage (browser preference)
   const [currentConvoId, setCurrentConvoId] = useLocalStorage<string | null>(
     'mmstr:current_convo_id',
@@ -67,18 +71,34 @@ export function useConversations(): UseConversationsReturn {
   const [currentConvo, setCurrentConvo] = useState<Convo | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Load conversations from database
+  // Load conversations from database, filtered by user participation
   const loadConversations = useCallback(async () => {
     setLoading(true);
     try {
-      const convos = await getConversations();
-      setConversations(convos);
+      const allConvos = await getConversations();
+      
+      // If no user is logged in, show no conversations
+      if (!currentUserId) {
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Get user's participated conversation IDs
+      const participatedConvoIds = await getUserParticipations(currentUserId);
+      
+      // Filter conversations to only those user participates in
+      const filteredConvos = allConvos.filter(convo => 
+        participatedConvoIds.includes(convo.id)
+      );
+      
+      setConversations(filteredConvos);
     } catch (error) {
       console.error('Error loading conversations:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUserId]);
 
   // Load current conversation
   const loadCurrentConvo = useCallback(async (id: string) => {
