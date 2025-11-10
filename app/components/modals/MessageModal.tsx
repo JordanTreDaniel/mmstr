@@ -5,6 +5,8 @@ import Modal from '@/app/components/ui/Modal';
 import { getMessageById } from '@/app/actions/messages';
 import { getInterpretationsByMessage } from '@/app/actions/interpretations';
 import { getUserById } from '@/app/actions/users';
+import { requiresInterpretation } from '@/lib/character-validation';
+import ViewOriginalStep from '@/app/components/message-modal/ViewOriginalStep';
 import type { Message, Interpretation } from '@/types/entities';
 
 export interface MessageModalProps {
@@ -84,10 +86,13 @@ const MessageModal: React.FC<MessageModalProps> = ({
   const [authorName, setAuthorName] = useState<string>('Loading...');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<'view-original' | 'submit-interpretation'>('view-original');
 
   useEffect(() => {
     if (isOpen && messageId) {
       loadMessageData();
+      // Reset to initial step when modal opens
+      setCurrentStep('view-original');
     }
   }, [isOpen, messageId]);
 
@@ -124,6 +129,14 @@ const MessageModal: React.FC<MessageModalProps> = ({
   // Determine the current view state
   const viewState = determineViewState(message, interpretations, currentUserId);
 
+  // Check if message requires interpretation
+  const needsInterpretation = message ? requiresInterpretation(message.text) : false;
+
+  // Handle starting interpretation
+  const handleStartInterpreting = () => {
+    setCurrentStep('submit-interpretation');
+  };
+
   // Create modal title with author name and timestamp
   const modalTitle = message
     ? `${authorName} • ${formatTimestamp(message.createdAt)}`
@@ -156,30 +169,63 @@ const MessageModal: React.FC<MessageModalProps> = ({
         {/* Main Content */}
         {!loading && !error && message && (
           <div>
-            {/* Original Message */}
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Original Message
-              </h3>
-              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
-                  {message.text}
+            {/* Conditional rendering based on view state and step */}
+            {viewState === 'submit' && needsInterpretation && currentStep === 'view-original' ? (
+              // Step 1: View Original Message (for interpreters)
+              <ViewOriginalStep
+                message={message}
+                onStartInterpreting={handleStartInterpreting}
+              />
+            ) : viewState === 'submit' && currentStep === 'submit-interpretation' ? (
+              // Step 2: Submit Interpretation Form (to be implemented in task 6.3)
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  💡 Interpretation submission form will be implemented in task 6.3
                 </p>
               </div>
-            </div>
+            ) : viewState === 'submit' && !needsInterpretation ? (
+              // Message doesn't require interpretation (too short)
+              <div className="space-y-4">
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                  <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+                    {message.text}
+                  </p>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                  <p className="text-sm text-green-800 dark:text-green-200">
+                    ✓ This message is too short to require interpretation. You can respond directly.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              // Default view for authors and others
+              <div>
+                {/* Original Message */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Original Message
+                  </h3>
+                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                    <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+                      {message.text}
+                    </p>
+                  </div>
+                </div>
 
-            {/* View State Information (Temporary - for debugging) */}
-            <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-4 border-t border-gray-200 dark:border-gray-700">
-              <p>Current View State: <strong>{viewState}</strong></p>
-              <p className="mt-1">Interpretations: {interpretations.length}</p>
-            </div>
+                {/* View State Information (Temporary - for debugging) */}
+                <div className="text-sm text-gray-500 dark:text-gray-400 text-center py-4 border-t border-gray-200 dark:border-gray-700">
+                  <p>Current View State: <strong>{viewState}</strong></p>
+                  <p className="mt-1">Interpretations: {interpretations.length}</p>
+                </div>
 
-            {/* TODO: Step views will be implemented in future tasks (6.2-6.7) */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                💡 Step views (Submit Interpretation, Review, etc.) will be implemented in upcoming tasks.
-              </p>
-            </div>
+                {/* TODO: Step views will be implemented in future tasks (6.3-6.7) */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    💡 Review and other step views will be implemented in upcoming tasks.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
