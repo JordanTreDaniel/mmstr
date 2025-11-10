@@ -58,10 +58,10 @@ export interface UseMessageInteractionsReturn {
   flowState: InterpretationFlowState | null;
   
   // Interpretation actions
-  submitInterpretation: (messageId: string, userId: string, text: string) => Promise<Interpretation | null>;
+  submitInterpretation: (messageId: string, userId: number, text: string) => Promise<Interpretation | null>;
   getAllInterpretations: (messageId: string) => Promise<Interpretation[]>;
-  getUserInterpretations: (messageId: string, userId: string) => Promise<Interpretation[]>;
-  getAttemptCount: (messageId: string, userId: string) => Promise<number>;
+  getUserInterpretations: (messageId: string, userId: number) => Promise<Interpretation[]>;
+  getAttemptCount: (messageId: string, userId: number) => Promise<number>;
   
   // Grading actions
   gradeInterpretation: (
@@ -95,7 +95,7 @@ export interface UseMessageInteractionsReturn {
   createInterpretationBreakdown: (interpretationId: string, points: string[]) => Promise<{ breakdown: Breakdown; points: Point[] }>;
   
   // Load flow state
-  loadFlowState: (messageId: string, userId: string) => Promise<void>;
+  loadFlowState: (messageId: string, userId: number) => Promise<void>;
   clearFlowState: () => void;
 }
 
@@ -108,7 +108,7 @@ export function useMessageInteractions(): UseMessageInteractionsReturn {
   // Submit a new interpretation
   const submitInterpretation = useCallback(async (
     messageId: string,
-    userId: string,
+    userId: number,
     text: string
   ): Promise<Interpretation | null> => {
     // Get current attempt count
@@ -141,12 +141,12 @@ export function useMessageInteractions(): UseMessageInteractionsReturn {
   }, []);
 
   // Get user's interpretations for a message
-  const getUserInterpretations = useCallback(async (messageId: string, userId: string): Promise<Interpretation[]> => {
+  const getUserInterpretations = useCallback(async (messageId: string, userId: number): Promise<Interpretation[]> => {
     return await getInterpretationsByMessage(messageId, userId);
   }, []);
 
   // Get attempt count
-  const getAttemptCount = useCallback(async (messageId: string, userId: string): Promise<number> => {
+  const getAttemptCount = useCallback(async (messageId: string, userId: number): Promise<number> => {
     const interpretations = await getInterpretationsByMessage(messageId, userId);
     return interpretations.length;
   }, []);
@@ -238,7 +238,7 @@ export function useMessageInteractions(): UseMessageInteractionsReturn {
   }, []);
 
   // Load flow state for a message and user
-  const loadFlowState = useCallback(async (messageId: string, userId: string) => {
+  const loadFlowState = useCallback(async (messageId: string, userId: number) => {
     try {
       const message = await getMessageById(messageId);
       

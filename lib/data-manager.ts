@@ -111,6 +111,7 @@ export function clearAllData(): void {
  */
 export function createConvo(
   title: string,
+  userId: number,
   maxAttempts: number = 3,
   participantLimit: number = 20
 ): Convo {
@@ -118,6 +119,7 @@ export function createConvo(
     id: getNextId('convo'),
     title,
     createdAt: getCurrentTimestamp(),
+    createdBy: userId,
     maxAttempts,
     participantLimit,
   };
@@ -195,7 +197,7 @@ export function deleteConvo(id: string): boolean {
 /**
  * Add user participation to conversation
  */
-export function addParticipation(userId: string, convoId: string): Participation | null {
+export function addParticipation(userId: number, convoId: string): Participation | null {
   // Check if already participating
   const participations = getItem<Participation[]>(STORAGE_KEYS.PARTICIPATIONS) || [];
   const exists = participations.find(p => p.userId === userId && p.convoId === convoId);
@@ -230,7 +232,7 @@ export function getConvoParticipations(convoId: string): Participation[] {
 /**
  * Get all participations for a user
  */
-export function getUserParticipations(userId: string): Participation[] {
+export function getUserParticipations(userId: number): Participation[] {
   const participations = getItem<Participation[]>(STORAGE_KEYS.PARTICIPATIONS) || [];
   return participations.filter(p => p.userId === userId);
 }
@@ -238,7 +240,7 @@ export function getUserParticipations(userId: string): Participation[] {
 /**
  * Check if user is participating in conversation
  */
-export function isUserParticipating(userId: string, convoId: string): boolean {
+export function isUserParticipating(userId: number, convoId: string): boolean {
   const participations = getItem<Participation[]>(STORAGE_KEYS.PARTICIPATIONS) || [];
   return participations.some(p => p.userId === userId && p.convoId === convoId);
 }
@@ -246,7 +248,7 @@ export function isUserParticipating(userId: string, convoId: string): boolean {
 /**
  * Remove user from conversation
  */
-export function removeParticipation(userId: string, convoId: string): boolean {
+export function removeParticipation(userId: number, convoId: string): boolean {
   const participations = getItem<Participation[]>(STORAGE_KEYS.PARTICIPATIONS) || [];
   const filtered = participations.filter(p => !(p.userId === userId && p.convoId === convoId));
   
@@ -292,7 +294,7 @@ export function validateMessageText(text: string): { valid: boolean; error?: str
  */
 export function createMessage(
   text: string,
-  userId: string,
+  userId: number,
   convoId: string,
   replyingToMessageId: string | null = null
 ): Message | null {
@@ -571,7 +573,7 @@ export function deletePoint(id: string): boolean {
  */
 export function createInterpretation(
   messageId: string,
-  userId: string,
+  userId: number,
   text: string
 ): Interpretation | null {
   // Get existing interpretations for this message by this user
@@ -638,7 +640,7 @@ export function getMessageInterpretations(messageId: string): Interpretation[] {
 /**
  * Get interpretations by user for a specific message
  */
-export function getUserMessageInterpretations(messageId: string, userId: string): Interpretation[] {
+export function getUserMessageInterpretations(messageId: string, userId: number): Interpretation[] {
   const interpretations = getItem<Interpretation[]>(STORAGE_KEYS.INTERPRETATIONS) || [];
   return interpretations.filter(i => i.messageId === messageId && i.userId === userId).sort((a, b) =>
     a.attemptNumber - b.attemptNumber
@@ -648,7 +650,7 @@ export function getUserMessageInterpretations(messageId: string, userId: string)
 /**
  * Get current attempt count for user on a message
  */
-export function getUserAttemptCount(messageId: string, userId: string): number {
+export function getUserAttemptCount(messageId: string, userId: number): number {
   const interpretations = getUserMessageInterpretations(messageId, userId);
   return interpretations.length;
 }
@@ -994,7 +996,7 @@ export function getConvoWithRelationships(convoId: string) {
  * Get user's interpretation status for a message
  * Returns null if no interpretations, or the latest interpretation with its status
  */
-export function getUserInterpretationStatus(messageId: string, userId: string) {
+export function getUserInterpretationStatus(messageId: string, userId: number) {
   const interpretations = getUserMessageInterpretations(messageId, userId);
   if (interpretations.length === 0) return null;
   

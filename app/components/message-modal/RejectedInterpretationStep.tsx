@@ -80,7 +80,7 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
       {/* Rejection/Arbitration Status Badge */}
       <div className="flex justify-center">
         {hasArbitration ? (
-          <Badge variant={arbitration.result === 'accept' ? 'success' : 'error'} size="lg">
+          <Badge variant={arbitration.result === 'accept' ? 'success' : 'danger'} size="lg">
             {arbitration.result === 'accept' ? '✓ Accepted by Arbitration' : '✗ Rejected by Arbitration'}
           </Badge>
         ) : hasAttemptsRemaining ? (
@@ -88,7 +88,7 @@ const RejectedInterpretationStep: React.FC<RejectedInterpretationStepProps> = ({
             ⚠️ Can Try Again
           </Badge>
         ) : (
-          <Badge variant="error" size="lg">
+          <Badge variant="danger" size="lg">
             ❌ Max Attempts Reached
           </Badge>
         )}
