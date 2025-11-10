@@ -36,6 +36,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Function definitions
   const ensureParticipation = async () => {
@@ -207,18 +208,11 @@ export default function ConversationPage({ params }: ConversationPageProps) {
     const url = window.location.href;
     
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: conversation?.title || 'MMSTR Conversation',
-          url: url,
-        });
-      } else {
-        // Fallback: Copy to clipboard
-        await navigator.clipboard.writeText(url);
-        alert('Link copied to clipboard!');
-      }
+      await navigator.clipboard.writeText(url);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
-      console.error('Error sharing:', err);
+      console.error('Error copying to clipboard:', err);
     }
   };
 
@@ -279,8 +273,8 @@ export default function ConversationPage({ params }: ConversationPageProps) {
             onClick={handleShareClick}
             className="flex items-center gap-2"
           >
-            <span>🔗</span>
-            <span>Share</span>
+            <span>{copySuccess ? '✓' : '🔗'}</span>
+            <span>{copySuccess ? 'Copied!' : 'Copy Link'}</span>
           </Button>
         }
       />
