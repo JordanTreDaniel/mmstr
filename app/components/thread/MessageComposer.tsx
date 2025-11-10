@@ -214,11 +214,11 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
   // If composer is blocked, show a helpful message instead
   if (!canReply) {
     return (
-      <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-6 rounded-b-lg">
-        <div className="text-center space-y-4">
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 sm:p-6 rounded-b-lg">
+        <div className="text-center space-y-3 sm:space-y-4">
           <div className="text-gray-700 dark:text-gray-300">
-            <p className="font-medium mb-2">Cannot Reply Yet</p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="font-medium mb-2 text-sm sm:text-base">Cannot Reply Yet</p>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               {replyBlockReason || 'You need to complete the required steps before replying.'}
             </p>
           </div>
@@ -237,13 +237,13 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
   }
 
   return (
-    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 rounded-b-lg">
-      <div className="space-y-3">
+    <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3 sm:p-4 rounded-b-lg">
+      <div className="space-y-2 sm:space-y-3">
         {/* Reply-to selector */}
         <div>
           <label 
             htmlFor="reply-to" 
-            className="block text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300"
+            className="block text-xs sm:text-sm font-medium mb-1.5 text-gray-700 dark:text-gray-300"
           >
             Replying to:
           </label>
@@ -251,7 +251,7 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
             id="reply-to"
             value={replyingToId || ''}
             onChange={(e) => setReplyingToId(e.target.value || null)}
-            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 sm:px-3 py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             disabled={messages.length === 0 || isSending}
           >
             {messages.length === 0 ? (
@@ -267,7 +267,7 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
             )}
           </select>
           {replyingToId && (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 italic">
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
               {getReplyToSnippet()}
             </p>
           )}
@@ -283,7 +283,7 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
             onKeyDown={handleKeyPress}
             maxLength={280}
             showCharacterCount
-            rows={4}
+            rows={3}
             resize="none"
             disabled={isSending || !canReply}
             error={error || undefined}
@@ -295,9 +295,10 @@ export function MessageComposer({ convoId, messages, onMessageSent, onOpenMessag
         <div className="flex justify-end">
           <Button
             variant="primary"
+            size="md"
             onClick={handleSend}
             disabled={!isValid || isSending || !canReply}
-            className="min-w-[100px]"
+            className="min-w-[80px] sm:min-w-[100px]"
           >
             {isSending ? 'Sending...' : 'Send'}
           </Button>

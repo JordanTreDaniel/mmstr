@@ -52,10 +52,10 @@ const Modal: React.FC<ModalProps> = ({
   if (!isOpen) return null;
 
   const sizeStyles = {
-    sm: 'max-w-md',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
+    sm: 'max-w-[95vw] sm:max-w-md',
+    md: 'max-w-[95vw] sm:max-w-lg',
+    lg: 'max-w-[95vw] sm:max-w-2xl',
+    xl: 'max-w-[95vw] sm:max-w-4xl',
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -66,7 +66,7 @@ const Modal: React.FC<ModalProps> = ({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black bg-opacity-50 backdrop-blur-sm"
       onClick={handleBackdropClick}
     >
       <div
@@ -77,9 +77,9 @@ const Modal: React.FC<ModalProps> = ({
       >
         {/* Header */}
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
             {title && (
-              <h2 id="modal-title" className="text-xl font-semibold text-gray-900 dark:text-white">
+              <h2 id="modal-title" className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                 {title}
               </h2>
             )}
@@ -106,7 +106,7 @@ const Modal: React.FC<ModalProps> = ({
         )}
 
         {/* Body */}
-        <div className="px-6 py-4 overflow-y-auto flex-1">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 overflow-y-auto flex-1">
           {children}
         </div>
       </div>

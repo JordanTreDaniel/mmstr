@@ -76,8 +76,8 @@ export default function SignUpModal({
       closeOnBackdropClick={false}
       closeOnEscape={false}
     >
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <p className="text-gray-600 dark:text-gray-400">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
           {description}
         </p>
 
@@ -92,7 +92,7 @@ export default function SignUpModal({
           disabled={isSubmitting}
         />
 
-        <div className="flex justify-end gap-3 pt-4">
+        <div className="flex justify-end gap-2 sm:gap-3 pt-3 sm:pt-4">
           <Button
             type="button"
             variant="ghost"

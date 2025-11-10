@@ -52,8 +52,8 @@ function formatTimestamp(isoString: string): string {
  * Renders the appropriate status icon based on message status
  */
 function StatusIcon({ status }: { status: MessageStatus }) {
-  const iconSize = 20;
-  const baseClasses = 'absolute -top-2 -right-2 p-1.5 rounded-full shadow-md';
+  const iconSize = 18;
+  const baseClasses = 'absolute -top-2 -right-2 p-1 sm:p-1.5 rounded-full shadow-md';
   
   switch (status) {
     case 'brain':
@@ -100,7 +100,7 @@ export function MessageCard({
 }: MessageCardProps) {
   return (
     <div className={`relative flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}>
-      <div className={`${isOwnMessage ? 'max-w-[80%] ml-auto' : 'max-w-[80%] mr-auto'}`}>
+      <div className={`${isOwnMessage ? 'max-w-[95%] sm:max-w-[85%] lg:max-w-[80%] ml-auto' : 'max-w-[95%] sm:max-w-[85%] lg:max-w-[80%] mr-auto'}`}>
       <Card
         variant="default"
         padding="md"
@@ -140,17 +140,17 @@ export function MessageCard({
         )}
         
         {/* Message header: user and timestamp */}
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-semibold text-gray-900 dark:text-gray-100">
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-gray-100 truncate">
             {userName}
           </span>
-          <span className="text-sm text-gray-500 dark:text-gray-400">
+          <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">
             {formatTimestamp(message.createdAt)}
           </span>
         </div>
         
         {/* Message text */}
-        <div className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+        <div className="text-sm sm:text-base text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
           {message.text}
         </div>
       </Card>

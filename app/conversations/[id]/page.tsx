@@ -280,19 +280,19 @@ export default function ConversationPage({ params }: ConversationPageProps) {
       />
       <PageContainer maxWidth="4xl" padding="md">
         {/* Conversation Title */}
-        <div className="py-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+        <div className="py-4 sm:py-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
             {conversation.title}
           </h1>
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex flex-wrap gap-1">
             <span>Max Attempts: {conversation.maxAttempts}</span>
-            <span className="mx-2">•</span>
+            <span className="mx-1 sm:mx-2">•</span>
             <span>Participant Limit: {conversation.participantLimit}</span>
           </div>
         </div>
 
         {/* Message List */}
-        <Card variant="elevated" padding="lg">
+        <Card variant="elevated" padding="md">
           <MessageList 
             messages={messagesWithMetadata}
             currentUserId={currentUserId}
@@ -304,7 +304,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
         </Card>
 
         {/* Message Composer */}
-        <div className="mt-4">
+        <div className="mt-3 sm:mt-4">
           <Card variant="elevated" padding="none">
             <MessageComposer
               convoId={id}

@@ -137,11 +137,11 @@ export default function Home() {
       />
       <PageContainer maxWidth="5xl" padding="md">
         {/* Hero Section */}
-        <section className="text-center mb-12 pt-8">
-          <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 dark:text-white mb-4">
+        <section className="text-center mb-8 sm:mb-12 pt-4 sm:pt-8">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 px-2">
             Make Me Say That&apos;s Right
           </h1>
-          <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
+          <p className="text-lg sm:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 max-w-3xl mx-auto px-4">
             Turn-based discussions that enforce comprehension before rebuttal
           </p>
           
@@ -159,12 +159,12 @@ export default function Home() {
         </section>
 
         {/* What is MMSTR Section */}
-        <section className="mb-12">
+        <section className="mb-8 sm:mb-12">
           <Card variant="elevated" padding="lg" className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
               What is MMSTR?
             </h2>
-            <p className="text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
+            <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
               &quot;Make Me Say That&apos;s Right&quot; - a negotiation technique by Chris Voss 
               that supercharges communication
             </p>
@@ -172,14 +172,14 @@ export default function Home() {
         </section>
 
         {/* How It Works + Benefits - Side by side on wide, stacked on mobile */}
-        <section className="mb-12 flex flex-col lg:flex-row gap-6 lg:gap-8">
+        <section className="mb-8 sm:mb-12 flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8">
           {/* How does MMSTR help? - First on mobile, right on desktop */}
           <div className="flex-1 lg:order-2">
             <Card variant="elevated" padding="lg" className="h-full">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                How does MMSTR help??
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+                How does MMSTR help?
               </h2>
-              <ul className="space-y-3 text-lg text-gray-700 dark:text-gray-300">
+              <ul className="space-y-2 sm:space-y-3 text-base sm:text-lg text-gray-700 dark:text-gray-300">
                 <li className="flex items-start">
                   <span className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0 text-xl">✓</span>
                   <span>Ensures clarity (what you said vs what they heard)</span>
@@ -211,10 +211,10 @@ export default function Home() {
           {/* How does it work - Second on mobile, left on desktop */}
           <div className="flex-1 lg:order-1">
             <Card variant="elevated" padding="lg" className="h-full">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
                 How does it work?
               </h2>
-              <ol className="space-y-4 text-lg text-gray-700 dark:text-gray-300">
+              <ol className="space-y-3 sm:space-y-4 text-base sm:text-lg text-gray-700 dark:text-gray-300">
                 <li className="flex items-start">
                   <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">1.</span>
                   <span>Someone makes a statement</span>
