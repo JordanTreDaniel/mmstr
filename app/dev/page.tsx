@@ -1,6 +1,6 @@
-import UIComponentsTest from '@/__dev__/components/UIComponentsTest';
+import ArbitrationTest from '@/__dev__/components/ArbitrationTest';
 
 export default function DevPage() {
-  return <UIComponentsTest />;
+  return <ArbitrationTest />;
 }
 

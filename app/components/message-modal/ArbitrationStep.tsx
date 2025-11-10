@@ -44,7 +44,7 @@ const ArbitrationStep: React.FC<ArbitrationStepProps> = ({
 
       {/* Decision Badge */}
       <div className="flex justify-center">
-        <Badge variant={isAccepted ? 'success' : 'error'} size="lg">
+        <Badge variant={isAccepted ? 'success' : 'danger'} size="lg">
           {isAccepted ? '✓ Interpretation Accepted' : '✗ Interpretation Rejected'}
         </Badge>
       </div>

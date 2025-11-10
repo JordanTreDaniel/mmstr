@@ -54,7 +54,7 @@ export default function HooksTest() {
 
   // State for current conversation data
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
-  const [currentParticipants, setCurrentParticipants] = useState<string[]>([]);
+  const [currentParticipants, setCurrentParticipants] = useState<number[]>([]);
 
   // Load messages and participants when currentConvo changes
   useEffect(() => {
@@ -89,7 +89,8 @@ export default function HooksTest() {
       const convo = await createConversation(
         convoTitle.trim(),
         currentUser.id,
-        currentUser.name
+        currentUser.name,
+        3 // maxAttempts default
       );
       setCurrentConvo(convo.id);
       setConvoTitle('');
