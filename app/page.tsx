@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/app/components/ui/Button';
 import Card from '@/app/components/ui/Card';
@@ -11,7 +11,7 @@ import SignUpModal from '@/app/components/modals/SignUpModal';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getConversationById } from '@/app/actions/convos';
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const joinConvoId = searchParams.get('join');
@@ -311,5 +311,33 @@ export default function Home() {
         onSignUp={handleSignUp}
       />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
+        <Header
+          rightContent={
+            <Button variant="ghost" size="sm">
+              Sign In
+            </Button>
+          }
+        />
+        <PageContainer maxWidth="5xl" padding="md">
+          <section className="text-center mb-12 pt-8">
+            <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 dark:text-white mb-4">
+              Make Me Say That&apos;s Right
+            </h1>
+            <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
+              Turn-based discussions that enforce comprehension before rebuttal
+            </p>
+          </section>
+        </PageContainer>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
