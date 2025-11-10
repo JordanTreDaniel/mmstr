@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Modal from '@/app/components/ui/Modal';
 import { getMessageById } from '@/app/actions/messages';
 import { getInterpretationsByMessage } from '@/app/actions/interpretations';
@@ -107,15 +107,8 @@ const MessageModal: React.FC<MessageModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<'view-original' | 'submit-interpretation'>('view-original');
 
-  useEffect(() => {
-    if (isOpen && messageId) {
-      loadMessageData();
-      // Reset to initial step when modal opens
-      setCurrentStep('view-original');
-    }
-  }, [isOpen, messageId]);
 
-  const loadMessageData = async () => {
+  const loadMessageData = useCallback(async () => {
     if (!messageId) return;
     
     setLoading(true);
@@ -157,7 +150,15 @@ const MessageModal: React.FC<MessageModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [messageId]);
+
+  useEffect(() => {
+    if (isOpen && messageId) {
+      loadMessageData();
+      // Reset to initial step when modal opens
+      setCurrentStep('view-original');
+    }
+  }, [isOpen, messageId, loadMessageData]);
 
   // Determine the current view state
   const viewState = determineViewState(message, interpretations, gradings, currentUserId);
@@ -243,7 +244,7 @@ const MessageModal: React.FC<MessageModalProps> = ({
         {!loading && !error && message && (
           <div>
             {/* Conditional rendering based on view state and step */}
-            {viewState === 'rejected' && rejectedInterpretation && convo ? (
+            {viewState === 'rejected' && rejectedInterpretation && convo && currentStep !== 'submit-interpretation' ? (
               // Rejected Interpretation View
               <RejectedInterpretationStep
                 message={message}
