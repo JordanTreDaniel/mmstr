@@ -10,7 +10,9 @@ import MessageModal from '@/app/components/modals/MessageModal';
 import { useConversations } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getConversationMessages } from '@/app/actions/messages';
+import { getInterpretationsByMessage, getGradingByInterpretation } from '@/app/actions/interpretations';
 import { getMessageStatus } from '@/lib/message-status';
+import { requiresInterpretation } from '@/lib/character-validation';
 import type { Convo, Message } from '@/types/entities';
 import type { MessageWithMetadata } from '@/app/components/thread';
 
@@ -65,41 +67,64 @@ export default function ConversationPage({ params }: ConversationPageProps) {
       const msgs = await getConversationMessages(id);
       setMessages(msgs);
       
-      // Build metadata for each message
-      const withMetadata: MessageWithMetadata[] = msgs.map((msg) => {
-        const user = getUserById(msg.userId);
-        const userName = user?.name || 'Unknown User';
-        
-        // For now, use simplified status determination
-        // TODO: Implement full interpretation-based status in future tasks
-        const isOwnMessage = msg.userId === currentUserId;
-        const requiresInterpretation = msg.text.trim().length >= 10;
-        
-        const status = getMessageStatus({
-          isOwnMessage,
-          requiresInterpretation,
-          hasInterpretation: false, // TODO: Check actual interpretations
-          hasResponded: false, // TODO: Check if user has responded
-        });
-        
-        // Get reply-to snippet if applicable
-        let replyingToSnippet: string | null = null;
-        if (msg.replyingToMessageId) {
-          const replyToMsg = msgs.find(m => m.id === msg.replyingToMessageId);
-          if (replyToMsg) {
-            replyingToSnippet = replyToMsg.text.length > 50
-              ? `${replyToMsg.text.substring(0, 50)}...`
-              : replyToMsg.text;
+      // Build metadata for each message with full interpretation status
+      const withMetadata: MessageWithMetadata[] = await Promise.all(
+        msgs.map(async (msg) => {
+          const user = getUserById(msg.userId);
+          const userName = user?.name || 'Unknown User';
+          
+          const isOwnMessage = msg.userId === currentUserId;
+          const needsInterpretation = requiresInterpretation(msg.text);
+          
+          // Check if current user has an interpretation for this message
+          let hasInterpretation = false;
+          let interpretationStatus: 'pending' | 'accepted' | 'rejected' | undefined = undefined;
+          
+          if (currentUserId && !isOwnMessage && needsInterpretation) {
+            const interpretations = await getInterpretationsByMessage(msg.id, currentUserId);
+            if (interpretations.length > 0) {
+              hasInterpretation = true;
+              // Get the latest interpretation's grading status
+              const latestInterpretation = interpretations[0];
+              const grading = await getGradingByInterpretation(latestInterpretation.id);
+              if (grading) {
+                interpretationStatus = grading.status;
+              }
+            }
           }
-        }
-        
-        return {
-          message: msg,
-          userName,
-          status,
-          replyingToSnippet,
-        };
-      });
+          
+          // Check if user has already responded to this message
+          const hasResponded = msgs.some(m => 
+            m.replyingToMessageId === msg.id && m.userId === currentUserId
+          );
+          
+          const status = getMessageStatus({
+            isOwnMessage,
+            requiresInterpretation: needsInterpretation,
+            hasInterpretation,
+            interpretationStatus,
+            hasResponded,
+          });
+          
+          // Get reply-to snippet if applicable
+          let replyingToSnippet: string | null = null;
+          if (msg.replyingToMessageId) {
+            const replyToMsg = msgs.find(m => m.id === msg.replyingToMessageId);
+            if (replyToMsg) {
+              replyingToSnippet = replyToMsg.text.length > 50
+                ? `${replyToMsg.text.substring(0, 50)}...`
+                : replyToMsg.text;
+            }
+          }
+          
+          return {
+            message: msg,
+            userName,
+            status,
+            replyingToSnippet,
+          };
+        })
+      );
       
       setMessagesWithMetadata(withMetadata);
     } catch (err) {
@@ -234,6 +259,8 @@ export default function ConversationPage({ params }: ConversationPageProps) {
         onClose={() => {
           setIsModalOpen(false);
           setSelectedMessageId(null);
+          // Refresh messages to update status icons after modal closes
+          loadMessages();
         }}
         messageId={selectedMessageId}
         currentUserId={currentUserId}

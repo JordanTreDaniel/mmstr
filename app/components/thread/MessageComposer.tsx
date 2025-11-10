@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { createMessage } from '@/app/actions/messages';
+import { getInterpretationsByMessage, getGradingByInterpretation } from '@/app/actions/interpretations';
+import { requiresInterpretation } from '@/lib/character-validation';
+import { canRespondToMessage } from '@/lib/message-status';
 import Button from '@/app/components/ui/Button';
 import Textarea from '@/app/components/ui/Textarea';
 import type { Message } from '@/types/entities';
@@ -26,6 +29,8 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canReply, setCanReply] = useState<boolean>(true);
+  const [replyBlockReason, setReplyBlockReason] = useState<string | null>(null);
 
   // Auto-select most recent message as reply target by default
   useEffect(() => {
@@ -34,10 +39,78 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
       setReplyingToId(mostRecentMessage.id);
     }
   }, [messages, replyingToId]);
+  
+  // Check if user can reply to the selected message
+  useEffect(() => {
+    async function checkReplyPermission() {
+      if (!replyingToId || !currentUserId) {
+        setCanReply(false);
+        setReplyBlockReason('No message selected');
+        return;
+      }
+      
+      const message = messages.find(m => m.id === replyingToId);
+      if (!message) {
+        setCanReply(false);
+        setReplyBlockReason('Message not found');
+        return;
+      }
+      
+      const isOwnMessage = message.userId === currentUserId;
+      const needsInterpretation = requiresInterpretation(message.text);
+      
+      // Check interpretation status if needed
+      let interpretationStatus: 'pending' | 'accepted' | 'rejected' | undefined = undefined;
+      
+      if (!isOwnMessage && needsInterpretation) {
+        const interpretations = await getInterpretationsByMessage(message.id, currentUserId);
+        if (interpretations.length > 0) {
+          const latestInterpretation = interpretations[0];
+          const grading = await getGradingByInterpretation(latestInterpretation.id);
+          if (grading) {
+            interpretationStatus = grading.status;
+          }
+        }
+      }
+      
+      const canRespond = canRespondToMessage({
+        isOwnMessage,
+        requiresInterpretation: needsInterpretation,
+        hasInterpretation: interpretationStatus !== undefined,
+        interpretationStatus,
+        hasResponded: false, // Not relevant for this check
+      });
+      
+      setCanReply(canRespond);
+      
+      if (!canRespond) {
+        if (isOwnMessage) {
+          setReplyBlockReason('Cannot reply to your own message');
+        } else if (needsInterpretation) {
+          if (!interpretationStatus) {
+            setReplyBlockReason('You must submit and get approval for your interpretation before replying');
+          } else if (interpretationStatus === 'pending') {
+            setReplyBlockReason('Your interpretation is pending review. Wait for approval before replying');
+          } else if (interpretationStatus === 'rejected') {
+            setReplyBlockReason('Your interpretation was rejected. Submit a new interpretation to reply');
+          }
+        }
+      } else {
+        setReplyBlockReason(null);
+      }
+    }
+    
+    checkReplyPermission();
+  }, [replyingToId, currentUserId, messages]);
 
   const handleSend = async () => {
     if (!currentUserId) {
       setError('No user logged in');
+      return;
+    }
+    
+    if (!canReply) {
+      setError(replyBlockReason || 'Cannot reply to this message');
       return;
     }
 
@@ -156,9 +229,9 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
             showCharacterCount
             rows={4}
             resize="none"
-            disabled={isSending}
+            disabled={isSending || !canReply}
             error={error || undefined}
-            helperText={!error ? 'Messages must be 10-280 characters' : undefined}
+            helperText={!error && canReply ? 'Messages must be 10-280 characters' : !canReply ? replyBlockReason || undefined : undefined}
           />
         </div>
 
@@ -167,7 +240,7 @@ export function MessageComposer({ convoId, messages, onMessageSent }: MessageCom
           <Button
             variant="primary"
             onClick={handleSend}
-            disabled={!isValid || isSending || !currentUserId}
+            disabled={!isValid || isSending || !currentUserId || !canReply}
             className="min-w-[100px]"
           >
             {isSending ? 'Sending...' : 'Send'}
