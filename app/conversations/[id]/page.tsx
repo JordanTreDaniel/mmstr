@@ -6,6 +6,7 @@ import { Header, PageContainer } from '@/app/components/layout';
 import Button from '@/app/components/ui/Button';
 import Card from '@/app/components/ui/Card';
 import { MessageList, MessageComposer } from '@/app/components/thread';
+import MessageModal from '@/app/components/modals/MessageModal';
 import { useConversations } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { getConversationMessages } from '@/app/actions/messages';
@@ -29,6 +30,8 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   const [messagesWithMetadata, setMessagesWithMetadata] = useState<MessageWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     loadConversation();
@@ -207,8 +210,8 @@ export default function ConversationPage({ params }: ConversationPageProps) {
           <MessageList 
             messages={messagesWithMetadata}
             onMessageClick={(messageId) => {
-              // TODO: Open message modal (future task)
-              console.log('Message clicked:', messageId);
+              setSelectedMessageId(messageId);
+              setIsModalOpen(true);
             }}
           />
         </Card>
@@ -224,6 +227,17 @@ export default function ConversationPage({ params }: ConversationPageProps) {
           </Card>
         </div>
       </PageContainer>
+
+      {/* Message Modal */}
+      <MessageModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedMessageId(null);
+        }}
+        messageId={selectedMessageId}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }
