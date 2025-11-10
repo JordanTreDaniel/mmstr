@@ -5,12 +5,14 @@ import Modal from '@/app/components/ui/Modal';
 import { getMessageById } from '@/app/actions/messages';
 import { getInterpretationsByMessage } from '@/app/actions/interpretations';
 import { getUserById } from '@/app/actions/users';
+import { getConversationById } from '@/app/actions/convos';
 import { requiresInterpretation } from '@/lib/character-validation';
 import ViewOriginalStep from '@/app/components/message-modal/ViewOriginalStep';
 import SubmitInterpretationStep from '@/app/components/message-modal/SubmitInterpretationStep';
 import ReviewInterpretationStep from '@/app/components/message-modal/ReviewInterpretationStep';
+import RejectedInterpretationStep from '@/app/components/message-modal/RejectedInterpretationStep';
 import { getGradingByInterpretation } from '@/app/actions/interpretations';
-import type { Message, Interpretation, InterpretationGrading } from '@/types/entities';
+import type { Message, Interpretation, InterpretationGrading, Convo } from '@/types/entities';
 
 export interface MessageModalProps {
   isOpen: boolean;
@@ -45,14 +47,14 @@ function formatTimestamp(isoString: string): string {
 
 /**
  * Determines the view state for the modal based on the current state of interpretations
- * Returns: 'view' | 'submit' | 'review'
+ * Returns: 'view' | 'submit' | 'review' | 'rejected'
  */
 function determineViewState(
   message: Message | null,
   interpretations: Interpretation[],
   gradings: Map<string, InterpretationGrading>,
   currentUserId: string | null
-): 'view' | 'submit' | 'review' {
+): 'view' | 'submit' | 'review' | 'rejected' {
   if (!message || !currentUserId) return 'view';
   
   // If current user is the author, they review interpretations
@@ -77,6 +79,15 @@ function determineViewState(
     return 'submit';
   }
   
+  // Get the latest interpretation
+  const latestInterpretation = userInterpretations[0]; // Already sorted by attempt_number DESC
+  const latestGrading = gradings.get(latestInterpretation.id);
+  
+  // Check if latest interpretation was rejected
+  if (latestGrading && latestGrading.status === 'rejected') {
+    return 'rejected';
+  }
+  
   // They've submitted interpretations - just view mode for now
   return 'view';
 }
@@ -88,6 +99,7 @@ const MessageModal: React.FC<MessageModalProps> = ({
   currentUserId,
 }) => {
   const [message, setMessage] = useState<Message | null>(null);
+  const [convo, setConvo] = useState<Convo | null>(null);
   const [interpretations, setInterpretations] = useState<Interpretation[]>([]);
   const [gradings, setGradings] = useState<Map<string, InterpretationGrading>>(new Map());
   const [authorName, setAuthorName] = useState<string>('Loading...');
@@ -117,6 +129,10 @@ const MessageModal: React.FC<MessageModalProps> = ({
         return;
       }
       setMessage(msg);
+      
+      // Load conversation (for maxAttempts)
+      const convoData = await getConversationById(msg.convoId);
+      setConvo(convoData);
       
       // Load author name
       const author = await getUserById(msg.userId);
@@ -155,6 +171,15 @@ const MessageModal: React.FC<MessageModalProps> = ({
       })
     : undefined;
 
+  // Get the latest rejected interpretation (if interpreter)
+  const rejectedInterpretation = message && currentUserId && message.userId !== currentUserId
+    ? interpretations.find(interp => {
+        if (interp.userId !== currentUserId) return false;
+        const grading = gradings.get(interp.id);
+        return grading && grading.status === 'rejected';
+      })
+    : undefined;
+
   // Check if message requires interpretation
   const needsInterpretation = message ? requiresInterpretation(message.text) : false;
 
@@ -169,6 +194,19 @@ const MessageModal: React.FC<MessageModalProps> = ({
     await loadMessageData();
     // Reset to view mode or show success message
     // For now, just close the modal
+    onClose();
+  };
+
+  // Handle Try Again (from rejected interpretation)
+  const handleTryAgain = () => {
+    setCurrentStep('submit-interpretation');
+  };
+
+  // Handle Dispute Submitted
+  const handleDisputeSubmitted = async () => {
+    // Reload message data to reflect dispute
+    await loadMessageData();
+    // Close modal after dispute submission
     onClose();
   };
 
@@ -205,13 +243,23 @@ const MessageModal: React.FC<MessageModalProps> = ({
         {!loading && !error && message && (
           <div>
             {/* Conditional rendering based on view state and step */}
-            {viewState === 'submit' && needsInterpretation && currentStep === 'view-original' ? (
+            {viewState === 'rejected' && rejectedInterpretation && convo ? (
+              // Rejected Interpretation View
+              <RejectedInterpretationStep
+                message={message}
+                interpretation={rejectedInterpretation}
+                grading={gradings.get(rejectedInterpretation.id)!}
+                maxAttempts={convo.maxAttempts}
+                onTryAgain={handleTryAgain}
+                onDisputeSubmitted={handleDisputeSubmitted}
+              />
+            ) : viewState === 'submit' && needsInterpretation && currentStep === 'view-original' ? (
               // Step 1: View Original Message (for interpreters)
               <ViewOriginalStep
                 message={message}
                 onStartInterpreting={handleStartInterpreting}
               />
-            ) : viewState === 'submit' && currentStep === 'submit-interpretation' && currentUserId ? (
+            ) : (viewState === 'submit' || viewState === 'rejected') && currentStep === 'submit-interpretation' && currentUserId ? (
               // Step 2: Submit Interpretation Form
               <SubmitInterpretationStep
                 message={message}
