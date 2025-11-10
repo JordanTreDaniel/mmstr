@@ -332,7 +332,7 @@ const ReviewInterpretationStep: React.FC<ReviewInterpretationStepProps> = ({
           disabled={isSubmitting}
           className="min-w-[150px] bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
         >
-          {isSubmitting ? 'Accepting...' : 'Accept Interpretation'}
+          {isSubmitting ? 'Accepting...' : 'That\'s Right!'}
         </Button>
       </div>
 
