@@ -8,7 +8,9 @@ import { getUserById } from '@/app/actions/users';
 import { requiresInterpretation } from '@/lib/character-validation';
 import ViewOriginalStep from '@/app/components/message-modal/ViewOriginalStep';
 import SubmitInterpretationStep from '@/app/components/message-modal/SubmitInterpretationStep';
-import type { Message, Interpretation } from '@/types/entities';
+import ReviewInterpretationStep from '@/app/components/message-modal/ReviewInterpretationStep';
+import { getGradingByInterpretation } from '@/app/actions/interpretations';
+import type { Message, Interpretation, InterpretationGrading } from '@/types/entities';
 
 export interface MessageModalProps {
   isOpen: boolean;
@@ -48,17 +50,20 @@ function formatTimestamp(isoString: string): string {
 function determineViewState(
   message: Message | null,
   interpretations: Interpretation[],
+  gradings: Map<string, InterpretationGrading>,
   currentUserId: string | null
 ): 'view' | 'submit' | 'review' {
   if (!message || !currentUserId) return 'view';
   
   // If current user is the author, they review interpretations
   if (message.userId === currentUserId) {
-    // Check if there are pending interpretations to review
-    const hasPendingInterpretations = interpretations.some(
-      interp => interp.userId !== currentUserId
-    );
-    return hasPendingInterpretations ? 'review' : 'view';
+    // Check if there are pending interpretations to review from other users
+    const pendingInterpretations = interpretations.filter(interp => {
+      if (interp.userId === currentUserId) return false; // Skip own interpretations
+      const grading = gradings.get(interp.id);
+      return grading && grading.status === 'pending';
+    });
+    return pendingInterpretations.length > 0 ? 'review' : 'view';
   }
   
   // If current user is not the author
@@ -84,6 +89,7 @@ const MessageModal: React.FC<MessageModalProps> = ({
 }) => {
   const [message, setMessage] = useState<Message | null>(null);
   const [interpretations, setInterpretations] = useState<Interpretation[]>([]);
+  const [gradings, setGradings] = useState<Map<string, InterpretationGrading>>(new Map());
   const [authorName, setAuthorName] = useState<string>('Loading...');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +125,16 @@ const MessageModal: React.FC<MessageModalProps> = ({
       // Load all interpretations for this message
       const interps = await getInterpretationsByMessage(messageId);
       setInterpretations(interps);
+      
+      // Load gradings for all interpretations
+      const gradingsMap = new Map<string, InterpretationGrading>();
+      for (const interp of interps) {
+        const grading = await getGradingByInterpretation(interp.id);
+        if (grading) {
+          gradingsMap.set(interp.id, grading);
+        }
+      }
+      setGradings(gradingsMap);
     } catch (err) {
       console.error('Error loading message data:', err);
       setError('Failed to load message data');
@@ -128,7 +144,16 @@ const MessageModal: React.FC<MessageModalProps> = ({
   };
 
   // Determine the current view state
-  const viewState = determineViewState(message, interpretations, currentUserId);
+  const viewState = determineViewState(message, interpretations, gradings, currentUserId);
+  
+  // Get the first pending interpretation for review (if author)
+  const pendingInterpretationForReview = message && currentUserId && message.userId === currentUserId
+    ? interpretations.find(interp => {
+        if (interp.userId === currentUserId) return false;
+        const grading = gradings.get(interp.id);
+        return grading && grading.status === 'pending';
+      })
+    : undefined;
 
   // Check if message requires interpretation
   const needsInterpretation = message ? requiresInterpretation(message.text) : false;
@@ -208,6 +233,19 @@ const MessageModal: React.FC<MessageModalProps> = ({
                   </p>
                 </div>
               </div>
+            ) : viewState === 'review' && pendingInterpretationForReview ? (
+              // Step 3: Review Interpretation (for message author)
+              <ReviewInterpretationStep
+                message={message}
+                interpretation={pendingInterpretationForReview}
+                grading={gradings.get(pendingInterpretationForReview.id)!}
+                onReviewComplete={async () => {
+                  // Reload message data to reflect updated grading
+                  await loadMessageData();
+                  // Close modal after successful review
+                  onClose();
+                }}
+              />
             ) : (
               // Default view for authors and others
               <div>
@@ -229,10 +267,10 @@ const MessageModal: React.FC<MessageModalProps> = ({
                   <p className="mt-1">Interpretations: {interpretations.length}</p>
                 </div>
 
-                {/* TODO: Step views will be implemented in future tasks (6.3-6.7) */}
+                {/* TODO: Other step views will be implemented in future tasks (6.7+) */}
                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    💡 Review and other step views will be implemented in upcoming tasks.
+                    💡 Additional views (rejected interpretations, arbitration) will be implemented in upcoming tasks.
                   </p>
                 </div>
               </div>
