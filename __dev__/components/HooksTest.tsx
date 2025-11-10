@@ -54,7 +54,7 @@ export default function HooksTest() {
 
   // State for current conversation data
   const [currentMessages, setCurrentMessages] = useState<Message[]>([]);
-  const [currentParticipants, setCurrentParticipants] = useState<Participation[]>([]);
+  const [currentParticipants, setCurrentParticipants] = useState<string[]>([]);
 
   // Load messages and participants when currentConvo changes
   useEffect(() => {
@@ -85,12 +85,13 @@ export default function HooksTest() {
   };
 
   const handleCreateConvo = async () => {
-    if (convoTitle.trim()) {
-      const convo = await createConversation(convoTitle.trim());
+    if (convoTitle.trim() && currentUser) {
+      const convo = await createConversation(
+        convoTitle.trim(),
+        currentUser.id,
+        currentUser.name
+      );
       setCurrentConvo(convo.id);
-      if (currentUser) {
-        await joinConversation(currentUser.id, convo.id);
-      }
       setConvoTitle('');
     }
   };
@@ -255,8 +256,8 @@ export default function HooksTest() {
             <div className="mt-4 p-3 bg-gray-50 rounded">
               <p className="font-medium mb-2">Participants ({currentParticipants.length}):</p>
               <div className="text-sm text-gray-600">
-                {currentParticipants.map((p) => (
-                  <span key={p.userId} className="mr-3">{p.userId}</span>
+                {currentParticipants.map((userId) => (
+                  <span key={userId} className="mr-3">{userId}</span>
                 ))}
               </div>
               

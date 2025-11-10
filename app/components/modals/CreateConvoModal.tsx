@@ -49,11 +49,16 @@ const CreateConvoModal: React.FC<CreateConvoModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      // Create the conversation
-      const convo = await createConversation(title.trim(), maxAttempts, maxParticipants);
+      // Create the conversation (user is automatically added as participant)
+      const convo = await createConversation(
+        title.trim(),
+        currentUser.id,
+        currentUser.name,
+        maxAttempts,
+        maxParticipants
+      );
 
-      // Create the first message if provided (before joining as participant)
-      // The conversation page will auto-join the creator when they navigate to it
+      // Create the first message if provided
       if (firstMessage.trim()) {
         await createMessage(firstMessage.trim(), currentUser.id, convo.id);
       }

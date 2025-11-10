@@ -1,14 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Header, PageContainer } from '@/app/components/layout';
+import Button from '@/app/components/ui/Button';
+import Card from '@/app/components/ui/Card';
+import { MessageList, MessageComposer } from '@/app/components/thread';
+import MessageModal from '@/app/components/modals/MessageModal';
 import { useConversations } from '@/hooks/use-conversations';
 import { useCurrentUser } from '@/hooks/use-current-user';
-import { Header, PageContainer } from '@/app/components/layout';
-import Card from '@/app/components/ui/Card';
-import Button from '@/app/components/ui/Button';
-import ConversationWelcomeModal from '@/app/components/modals/ConversationWelcomeModal';
-import type { Convo } from '@/types/entities';
+import { getConversationMessages } from '@/app/actions/messages';
+import { getInterpretationsByMessage, getGradingByInterpretation } from '@/app/actions/interpretations';
+import { getMessageStatus } from '@/lib/message-status';
+import { requiresInterpretation } from '@/lib/character-validation';
+import type { Convo, Message } from '@/types/entities';
+import type { MessageWithMetadata } from '@/app/components/thread';
 
 interface ConversationPageProps {
   params: Promise<{
@@ -17,96 +23,175 @@ interface ConversationPageProps {
 }
 
 export default function ConversationPage({ params }: ConversationPageProps) {
-  const [id, setId] = useState<string | null>(null);
+  const { id } = use(params);
   const router = useRouter();
-  const { currentUser } = useCurrentUser();
-  const { 
-    getConversation,
-    joinConversation,
-    checkParticipation 
-  } = useConversations();
-  
-  const [convo, setConvo] = useState<Convo | null>(null);
+  const { getConversation } = useConversations();
+  const { currentUserId, getUserById } = useCurrentUser();
+  const [conversation, setConversation] = useState<Convo | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesWithMetadata, setMessagesWithMetadata] = useState<MessageWithMetadata[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isParticipant, setIsParticipant] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [isNewConvo, setIsNewConvo] = useState(false);
-
-  // Unwrap params promise (Next.js 15+)
-  useEffect(() => {
-    params.then((p) => setId(p.id));
-  }, [params]);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
-    
-    const loadConversation = async () => {
-      setLoading(true);
-      try {
-        // Load conversation details
-        const loadedConvo = await getConversation(id);
-        if (!loadedConvo) {
-          // Conversation not found
-          router.push('/');
-          return;
-        }
-        
-        setConvo(loadedConvo);
-
-        // Check if user is a participant
-        if (currentUser) {
-          const participating = await checkParticipation(currentUser.id, id);
-          setIsParticipant(participating);
-          
-          // If not participating, auto-join
-          if (!participating) {
-            await joinConversation(currentUser.id, id);
-            setIsParticipant(true);
-            setIsNewConvo(true);
-            setShowWelcome(true);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading conversation:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadConversation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, currentUser?.id]);
+  }, [id]);
 
+  useEffect(() => {
+    loadMessages();
+  }, [id]);
+
+  const loadConversation = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const convo = await getConversation(id);
+      if (convo) {
+        setConversation(convo);
+      } else {
+        setError('Conversation not found');
+      }
+    } catch (err) {
+      console.error('Error loading conversation:', err);
+      setError('Failed to load conversation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMessages = async () => {
+    try {
+      const msgs = await getConversationMessages(id);
+      setMessages(msgs);
+      
+      // Build metadata for each message with full interpretation status
+      const withMetadata: MessageWithMetadata[] = await Promise.all(
+        msgs.map(async (msg) => {
+          const user = getUserById(msg.userId);
+          const userName = user?.name || 'Unknown User';
+          
+          const isOwnMessage = msg.userId === currentUserId;
+          const needsInterpretation = requiresInterpretation(msg.text);
+          
+          // Check if current user has an interpretation for this message
+          let hasInterpretation = false;
+          let interpretationStatus: 'pending' | 'accepted' | 'rejected' | undefined = undefined;
+          
+          if (currentUserId && !isOwnMessage && needsInterpretation) {
+            const interpretations = await getInterpretationsByMessage(msg.id, currentUserId);
+            if (interpretations.length > 0) {
+              hasInterpretation = true;
+              // Get the latest interpretation's grading status
+              const latestInterpretation = interpretations[0];
+              const grading = await getGradingByInterpretation(latestInterpretation.id);
+              if (grading) {
+                interpretationStatus = grading.status;
+              }
+            }
+          }
+          
+          // Check if user has already responded to this message
+          const hasResponded = msgs.some(m => 
+            m.replyingToMessageId === msg.id && m.userId === currentUserId
+          );
+          
+          const status = getMessageStatus({
+            isOwnMessage,
+            requiresInterpretation: needsInterpretation,
+            hasInterpretation,
+            interpretationStatus,
+            hasResponded,
+          });
+          
+          // Get reply-to snippet if applicable
+          let replyingToSnippet: string | null = null;
+          if (msg.replyingToMessageId) {
+            const replyToMsg = msgs.find(m => m.id === msg.replyingToMessageId);
+            if (replyToMsg) {
+              replyingToSnippet = replyToMsg.text.length > 50
+                ? `${replyToMsg.text.substring(0, 50)}...`
+                : replyToMsg.text;
+            }
+          }
+          
+          return {
+            message: msg,
+            userName,
+            status,
+            replyingToSnippet,
+          };
+        })
+      );
+      
+      setMessagesWithMetadata(withMetadata);
+    } catch (err) {
+      console.error('Error loading messages:', err);
+    }
+  };
+
+  const handleBackClick = () => {
+    router.push('/');
+  };
+
+  const handleShareClick = async () => {
+    const url = window.location.href;
+    
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: conversation?.title || 'MMSTR Conversation',
+          url: url,
+        });
+      } else {
+        // Fallback: Copy to clipboard
+        await navigator.clipboard.writeText(url);
+        alert('Link copied to clipboard!');
+      }
+    } catch (err) {
+      console.error('Error sharing:', err);
+    }
+  };
+
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
-        <Header />
-        <PageContainer>
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600 dark:text-gray-400">Loading conversation...</p>
-            </div>
+        <Header
+          showBackButton
+          onBackClick={handleBackClick}
+        />
+        <PageContainer maxWidth="4xl" padding="md">
+          <div className="flex items-center justify-center py-12">
+            <div className="text-gray-600 dark:text-gray-400">Loading conversation...</div>
           </div>
         </PageContainer>
       </div>
     );
   }
 
-  if (!convo) {
+  // Error state - 404 or other errors
+  if (error || !conversation) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
-        <Header />
-        <PageContainer>
-          <Card variant="elevated" padding="lg" className="max-w-2xl mx-auto mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-              Conversation Not Found
-            </h2>
+        <Header
+          showBackButton
+          onBackClick={handleBackClick}
+        />
+        <PageContainer maxWidth="4xl" padding="md">
+          <Card variant="elevated" padding="lg" className="text-center max-w-md mx-auto mt-12">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+              {error === 'Conversation not found' ? 'Conversation Not Found' : 'Error'}
+            </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              The conversation you&apos;re looking for doesn&apos;t exist or has been removed.
+              {error === 'Conversation not found' 
+                ? "The conversation you're looking for doesn't exist or has been deleted."
+                : 'Failed to load conversation. Please try again.'}
             </p>
-            <Button onClick={() => router.push('/')}>
-              Back to Home
+            <Button variant="primary" onClick={handleBackClick}>
+              Go Back Home
             </Button>
           </Card>
         </PageContainer>
@@ -114,50 +199,72 @@ export default function ConversationPage({ params }: ConversationPageProps) {
     );
   }
 
+  // Main conversation view
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
-      <Header />
-      <PageContainer>
-        <Card variant="elevated" padding="lg" className="max-w-4xl mx-auto mt-8">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              {convo.title}
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Created {new Date(convo.createdAt).toLocaleString()}
-            </p>
+      <Header
+        showBackButton
+        onBackClick={handleBackClick}
+        rightContent={
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={handleShareClick}
+            className="flex items-center gap-2"
+          >
+            <span>🔗</span>
+            <span>Share</span>
+          </Button>
+        }
+      />
+      <PageContainer maxWidth="4xl" padding="md">
+        {/* Conversation Title */}
+        <div className="py-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            {conversation.title}
+          </h1>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            <span>Max Attempts: {conversation.maxAttempts}</span>
+            <span className="mx-2">•</span>
+            <span>Participant Limit: {conversation.participantLimit}</span>
           </div>
+        </div>
 
-          <div className="space-y-4">
-            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                Conversation Settings
-              </h3>
-              <ul className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                <li>Max Participants: {convo.participantLimit}</li>
-                <li>Max Interpretation Attempts: {convo.maxAttempts}</li>
-              </ul>
-            </div>
-
-            <div className="text-center py-8">
-              <p className="text-gray-600 dark:text-gray-400">
-                Message thread will appear here
-              </p>
-            </div>
-          </div>
+        {/* Message List */}
+        <Card variant="elevated" padding="lg">
+          <MessageList 
+            messages={messagesWithMetadata}
+            onMessageClick={(messageId) => {
+              setSelectedMessageId(messageId);
+              setIsModalOpen(true);
+            }}
+          />
         </Card>
+
+        {/* Message Composer */}
+        <div className="mt-4">
+          <Card variant="elevated" padding="none">
+            <MessageComposer
+              convoId={id}
+              messages={messages}
+              onMessageSent={loadMessages}
+            />
+          </Card>
+        </div>
       </PageContainer>
 
-      {/* Welcome Modal */}
-      {showWelcome && id && (
-        <ConversationWelcomeModal
-          isOpen={showWelcome}
-          onClose={() => setShowWelcome(false)}
-          conversationId={id}
-          conversationTitle={convo.title}
-          isCreator={isNewConvo}
-        />
-      )}
+      {/* Message Modal */}
+      <MessageModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedMessageId(null);
+          // Refresh messages to update status icons after modal closes
+          loadMessages();
+        }}
+        messageId={selectedMessageId}
+        currentUserId={currentUserId}
+      />
     </div>
   );
 }

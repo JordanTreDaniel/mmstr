@@ -32,7 +32,7 @@ export interface UseConversationsReturn {
   loading: boolean;
   
   // Actions
-  createConversation: (title: string, maxAttempts?: number, participantLimit?: number) => Promise<Convo>;
+  createConversation: (title: string, userId: string, userName: string, maxAttempts?: number, participantLimit?: number) => Promise<Convo>;
   getConversation: (id: string) => Promise<Convo | null>;
   updateConversation: (id: string, updates: Partial<Omit<Convo, 'id' | 'createdAt'>>) => Promise<Convo | null>;
   deleteConversation: (id: string) => Promise<boolean>;
@@ -45,7 +45,7 @@ export interface UseConversationsReturn {
   // Participations
   joinConversation: (userId: string, convoId: string) => Promise<boolean>;
   leaveConversation: (userId: string, convoId: string) => Promise<boolean>;
-  getParticipants: (convoId: string) => Promise<Participation[]>;
+  getParticipants: (convoId: string) => Promise<string[]>;
   checkParticipation: (userId: string, convoId: string) => Promise<boolean>;
   
   // Refresh
@@ -109,10 +109,12 @@ export function useConversations(): UseConversationsReturn {
   // Create a new conversation
   const createConversation = useCallback(async (
     title: string,
+    userId: string,
+    userName: string,
     maxAttempts: number = 3,
     participantLimit: number = 20
   ): Promise<Convo> => {
-    const convo = await createConvoAction(title, maxAttempts, participantLimit);
+    const convo = await createConvoAction(title, userId, userName, maxAttempts, participantLimit);
     await loadConversations();
     return convo;
   }, [loadConversations]);
@@ -171,7 +173,8 @@ export function useConversations(): UseConversationsReturn {
 
   // Join a conversation
   const joinConversation = useCallback(async (userId: string, convoId: string): Promise<boolean> => {
-    return await addParticipation(userId, convoId);
+    const participation = await addParticipation(userId, convoId);
+    return !!participation;
   }, []);
 
   // Leave a conversation
@@ -180,7 +183,7 @@ export function useConversations(): UseConversationsReturn {
   }, []);
 
   // Get participants of a conversation
-  const getParticipants = useCallback(async (convoId: string): Promise<Participation[]> => {
+  const getParticipants = useCallback(async (convoId: string): Promise<string[]> => {
     return await getConversationParticipants(convoId);
   }, []);
 

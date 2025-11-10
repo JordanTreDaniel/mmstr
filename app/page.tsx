@@ -1,12 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Button from '@/app/components/ui/Button';
 import Card from '@/app/components/ui/Card';
 import { Header, PageContainer } from '@/app/components/layout';
 import CreateConvoModal from '@/app/components/modals/CreateConvoModal';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 export default function Home() {
+  const router = useRouter();
+  const { currentUser } = useCurrentUser();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const handleNewConversation = () => {
@@ -18,13 +22,27 @@ export default function Home() {
     // TODO: Navigate to conversation page in future task
   };
 
+  const handleConversationsClick = () => {
+    router.push('/conversations');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-black">
       <Header
         rightContent={
-          <Button variant="ghost" size="sm">
-            Sign In
-          </Button>
+          currentUser ? (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleConversationsClick}
+            >
+              Conversations
+            </Button>
+          ) : (
+            <Button variant="ghost" size="sm">
+              Sign In
+            </Button>
+          )
         }
       />
       <PageContainer maxWidth="5xl" padding="md">

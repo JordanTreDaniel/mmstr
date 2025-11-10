@@ -3,6 +3,8 @@
 import { client } from '@/lib/db';
 import type { Message } from '@/types/entities';
 import { v4 as uuidv4 } from 'uuid';
+import { ensureUser, getUserById } from './users';
+import { addParticipation } from './participations';
 
 /**
  * Message validation constraints
@@ -12,6 +14,7 @@ const MESSAGE_MAX_LENGTH = 280;
 
 /**
  * Create a new message
+ * Ensures user exists in DB and is a participant in the conversation
  */
 export async function createMessage(
   text: string,
@@ -24,6 +27,17 @@ export async function createMessage(
   if (trimmedText.length < MESSAGE_MIN_LENGTH || trimmedText.length > MESSAGE_MAX_LENGTH) {
     return null;
   }
+  
+  // Get user from DB to ensure they exist
+  const user = await getUserById(userId);
+  if (!user) {
+    // User doesn't exist in DB, cannot create message
+    console.error(`User ${userId} not found in database`);
+    return null;
+  }
+  
+  // Ensure user is a participant in the conversation
+  await addParticipation(userId, convoId);
   
   const id = uuidv4();
   const createdAt = new Date().toISOString();
