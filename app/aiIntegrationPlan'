@@ -1,0 +1,60 @@
+# AI Integration with LangChain
+
+- [ ] 1: Preparation - Setup AI Infrastructure
+- [ ] 1.1: Install dependencies and verify imports
+  - [ ] 1.1.1: Install langchain, @langchain/openai, and axios packages
+  - [ ] 1.1.2: Create test file and verify LangChain, OpenAI, etc. imports work without errors
+- [ ] 1.2: Create environment configuration
+  - [ ] 1.2.1: Create .env.example with all required OpenAI/LangSmith variables
+  - [ ] 1.2.2: Add env validation utility in lib/env.ts to check required keys
+- [ ] 1.3: Create core AI service infrastructure
+  - [ ] 1.3.1: Create lib/ai/client.ts with OpenAI client initialization and LangSmith tracing
+  - [ ] 1.3.2: Create lib/ai/prompts.ts with system prompts and XML template helpers
+  - [ ] 1.3.3: Verify AI client can make test call and return response
+
+- [ ] 2: Implementation - Replace Mock AI Functions
+- [ ] 2.1: Implement AI-powered interpretation grading (PRIORITY - Most Important)
+  - [ ] 2.1.1: Create lib/ai/grade-interpretation.ts with full prompt including unbiased instructions
+  - [ ] 2.1.1.1: Build prompt with XML tags for conversation context (all previous messages without interpretations)
+  - [ ] 2.1.1.2: Add "death by firing squad" bias warning and strict judge role instructions
+  - [ ] 2.1.1.3: Include original message and interpretation in separate XML sections
+  - [ ] 2.1.1.4: Request similarity score (0-100), pass/fail judgment, and detailed reasoning
+  - [ ] 2.1.2: Add dishonesty detection warnings to prompt (inserting/omitting details, responding vs repeating)
+  - [ ] 2.1.3: Parse AI response to extract similarity score and auto-accept suggestion
+  - [ ] 2.1.4: Update app/actions/interpretations.ts gradeInterpretation() to call AI version
+  - [ ] 2.1.5: Test grading with sample message/interpretation and verify response structure
+- [ ] 2.2: Implement AI-powered breakdown generation
+  - [ ] 2.2.1: Create lib/ai/generate-breakdown.ts for atomic point extraction
+  - [ ] 2.2.1.1: Build prompt requesting every mini-assertion (adjectives, purposes, motivations, everything)
+  - [ ] 2.2.1.2: Request structured JSON array output with numbered points
+  - [ ] 2.2.2: Parse AI response to extract point array
+  - [ ] 2.2.3: Update app/actions/breakdowns.ts to use AI breakdown generator
+  - [ ] 2.2.4: Test breakdown with sample text and verify points are sufficiently granular
+- [ ] 2.3: Implement AI-powered arbitration with dual breakdowns
+  - [ ] 2.3.1: Create lib/ai/arbitrate-interpretation.ts with comprehensive arbitration prompt
+  - [ ] 2.3.1.1: Include all conversation messages for full context
+  - [ ] 2.3.1.2: Generate breakdown of original message using AI
+  - [ ] 2.3.1.3: Generate breakdown of interpretation using AI
+  - [ ] 2.3.1.4: Build final arbitration prompt with both breakdowns, author notes, and dispute reason
+  - [ ] 2.3.1.5: Add unbiased mediator instructions and dishonesty detection warnings
+  - [ ] 2.3.2: Parse arbitration response for accept/reject decision and detailed explanation
+  - [ ] 2.3.3: Update triggerArbitrationForDispute() in app/actions/interpretations.ts to use AI arbitration
+  - [ ] 2.3.4: Update triggerArbitrationForMaxAttempts() to use AI arbitration
+  - [ ] 2.3.5: Test arbitration with sample dispute and verify reasoning quality
+- [ ] 2.4: Move mocks to **dev** directory for testing only
+  - [ ] 2.4.1: Move mocks/mock-ai-*.ts files to **dev**/mocks/
+  - [ ] 2.4.2: Update any dev test files to import from new **dev**/mocks/ location
+  - [ ] 2.4.3: Verify production code no longer imports from mocks directory
+
+- [ ] 3: Error Handling and Production Readiness
+- [ ] 3.1: Add comprehensive error handling to all AI functions
+  - [ ] 3.1.1: Throw clear errors on API failures (no silent fallbacks to mocks)
+  - [ ] 3.1.2: Add timeout handling for slow AI responses
+  - [ ] 3.1.3: Add retry logic with exponential backoff for transient failures
+- [ ] 3.2: Add request/response logging for debugging
+  - [ ] 3.2.1: Log AI prompts and responses in development mode
+  - [ ] 3.2.2: Ensure sensitive data is not logged in production
+- [ ] 3.3: Test complete flow end-to-end
+  - [ ] 3.3.1: Create interpretation and verify AI grading works
+  - [ ] 3.3.2: Trigger dispute and verify AI arbitration with dual breakdowns works
+  - [ ] 3.3.3: Verify error messages are clear when API fails
