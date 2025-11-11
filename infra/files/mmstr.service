@@ -1,0 +1,15 @@
+[Unit]
+Description=MMSTR Next.js App
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/mmstr
+Environment=PORT=3000
+ExecStart=/bin/bash -c 'source /home/ec2-user/.nvm/nvm.sh && npm run start'
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

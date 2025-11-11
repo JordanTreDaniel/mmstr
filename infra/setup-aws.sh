@@ -100,9 +100,9 @@ echo "This would have worked, but I already ran this for this app on Nov 10th 20
 # echo "2. Copy terraform.tfvars.example to terraform.tfvars"
 # echo "3. Edit terraform.tfvars with:"
 # echo "   - elastic_ip_allocation_id = \"$ALLOCATION_ID\""
-# echo "   - ssh_private_key_path = \"$KEY_PATH\""
+# echo "   - aws_ssh_private_key_path = \"$KEY_PATH\""
 
-# echo "   - github_ssh_key_path = \"/path/to/your/github/key\""
+# echo "   - github_ssh_private_key_path = \"/path/to/your/github/key\""
 # echo "   - app_repo = \"git@github.com:JordanTreDaniel/mmstr.git\""
 # echo "   - ssl_email = \"lilj390150@yahoo.com\""
 # echo "4. Run: terraform init && terraform plan && terraform apply"

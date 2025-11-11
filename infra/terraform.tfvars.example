@@ -1,0 +1,24 @@
+# Copy this file to terraform.tfvars and fill in your values
+
+# AWS Configuration
+region                    = "us-east-2"
+instance_type            = "t3.small"
+
+# EC2 Key Pair (create in AWS Console first)
+key_name                 = "mmstr-key"
+ami_id                   = "ami-06971c49acd687c30"  # Amazon Linux 2023 us-east-2
+
+# SSH Keys
+aws_ssh_private_key_path     = "/path/to/your/mmstr-key.pem"
+github_ssh_private_key_path      = "/path/to/your/github/deploy/key"
+
+# Application
+app_repo                 = "git@github.com:yourusername/mmstr.git"
+
+# Domain & SSL
+ssl_email                = "your@email.com"
+domain_name              = "mmstr.jordanchristley.com"
+
+# Elastic IP (create first with: aws ec2 allocate-address --domain vpc --region us-east-2)
+elastic_ip_allocation_id = "eipalloc-xxxxxxxxxxxxx"
+
