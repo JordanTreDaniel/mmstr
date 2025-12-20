@@ -3,10 +3,10 @@
 import { client } from '@/lib/db';
 import type { Interpretation, InterpretationGrading, InterpretationGradingResponse, Arbitration } from '@/types/entities';
 import { v4 as uuidv4 } from 'uuid';
-import { calculateSimilarity } from '@/mocks/mock-ai-similarity';
 import { calculateWordSimilarity } from '@/lib/word-similarity';
-import { arbitrateInterpretation, arbitrateMaxAttempts } from '@/mocks/mock-ai-arbitration';
-import { getMessageById } from './messages';
+import { gradeInterpretation as gradeInterpretationAI } from '@/lib/ai/grade-interpretation';
+import { arbitrateInterpretation as arbitrateInterpretationAI, arbitrateMaxAttempts as arbitrateMaxAttemptsAI } from '@/lib/ai/arbitrate-interpretation';
+import { getMessageById, getConversationMessages } from './messages';
 import { getConversationById } from './convos';
 
 /**
@@ -319,10 +319,14 @@ async function triggerArbitrationForDispute(
     throw new Error('Original message not found');
   }
 
-  // Call mock AI arbitration
-  const arbitrationResult = await arbitrateInterpretation(
-    message.text,
+  // Get all conversation messages for context
+  const conversationMessages = await getConversationMessages(message.convoId);
+
+  // Call AI arbitration with full context
+  const arbitrationResult = await arbitrateInterpretationAI(
+    message,
     interpretation.text,
+    conversationMessages,
     grading.notes,
     disputeText
   );
@@ -383,10 +387,14 @@ async function triggerArbitrationForMaxAttempts(
     return;
   }
 
-  // Call mock AI arbitration for max attempts (more lenient)
-  const arbitrationResult = await arbitrateMaxAttempts(
-    message.text,
+  // Get all conversation messages for context
+  const conversationMessages = await getConversationMessages(message.convoId);
+
+  // Call AI arbitration for max attempts
+  const arbitrationResult = await arbitrateMaxAttemptsAI(
+    message,
     interpretation.text,
+    conversationMessages,
     interpretation.attemptNumber
   );
 
@@ -405,11 +413,11 @@ async function triggerArbitrationForMaxAttempts(
 /**
  * Grade an interpretation using AI similarity scoring
  * This function:
- * 1. Calls the mock AI similarity function to calculate semantic similarity
- * 2. Checks for too-similar wording (>70% word overlap)
+ * 1. Calls the AI grading function to calculate semantic similarity and accuracy
+ * 2. Checks for too-similar wording (>70% word overlap) - still auto-rejects on this
  * 3. Creates an InterpretationGrading record with appropriate status
- * 4. Auto-rejects if wording is too similar
- * 5. Sets status to 'pending' if below auto-accept threshold (90%)
+ * 4. Auto-rejects if wording is too similar (word overlap check)
+ * 5. Sets status based on AI judgment (pending if not auto-accepted)
  * 
  * @param interpretationId The interpretation to grade
  * @returns The created grading record
@@ -429,25 +437,32 @@ export async function gradeInterpretation(
     throw new Error('Original message not found');
   }
 
-  // Calculate AI similarity score (semantic similarity)
-  const aiResult = await calculateSimilarity(message.text, interpretation.text);
+  // Get all conversation messages for context (excluding interpretations)
+  const conversationMessages = await getConversationMessages(message.convoId);
 
-  // Check for too-similar wording (word overlap)
+  // Calculate AI similarity score and judgment
+  const aiResult = await gradeInterpretationAI(message, interpretation.text, conversationMessages);
+
+  // Check for too-similar wording (word overlap) - still apply this check
   const wordSimilarity = calculateWordSimilarity(message.text, interpretation.text);
 
   // Determine status:
-  // - Auto-reject if word overlap > 70%
+  // - Auto-reject if word overlap > 70% (too similar wording)
+  // - Auto-accept if AI suggests it (score >= 90 and passes === true)
   // - Otherwise, 'pending' (author must manually accept/reject)
-  let status: 'pending' | 'rejected';
+  let status: 'pending' | 'accepted' | 'rejected';
   let notes: string | null = null;
 
   if (wordSimilarity.shouldAutoReject) {
     status = 'rejected';
     notes = `Automatically rejected: ${Math.round(wordSimilarity.similarity * 100)}% word overlap (threshold: 70%). Please use different wording to demonstrate understanding.`;
+  } else if (aiResult.autoAcceptSuggested && aiResult.passes) {
+    status = 'accepted';
+    notes = `AI suggested auto-accept: ${aiResult.similarityScore.toFixed(1)}% similarity. ${aiResult.reasoning}`;
   } else {
-    // Below auto-accept threshold or within acceptable range
+    // Below auto-accept threshold or AI says it doesn't pass
     status = 'pending';
-    notes = null;
+    notes = aiResult.reasoning; // Include AI reasoning for author review
   }
 
   // Create the grading record

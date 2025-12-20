@@ -3,6 +3,7 @@
 import { client } from '@/lib/db';
 import type { Breakdown, Point } from '@/types/entities';
 import { v4 as uuidv4 } from 'uuid';
+import { generateBreakdown as generateBreakdownAI } from '@/lib/ai/generate-breakdown';
 
 /**
  * Create a breakdown for a message or interpretation
@@ -134,5 +135,35 @@ export async function deleteBreakdown(id: string): Promise<boolean> {
   });
   
   return true;
+}
+
+/**
+ * Generate and create a breakdown using AI
+ * Uses AI to break down text into atomic points, then creates the breakdown and points in the database
+ * 
+ * @param text The text to break down
+ * @param messageId Optional message ID to associate with the breakdown
+ * @param interpretationId Optional interpretation ID to associate with the breakdown
+ * @returns The created breakdown with its points
+ */
+export async function generateAndCreateBreakdown(
+  text: string,
+  messageId: string | null = null,
+  interpretationId: string | null = null
+): Promise<{ breakdown: Breakdown; points: Point[] }> {
+  // Generate breakdown using AI
+  const breakdownPoints = await generateBreakdownAI(text);
+
+  // Create the breakdown record
+  const breakdown = await createBreakdown(messageId, interpretationId);
+
+  // Create all points
+  const points: Point[] = [];
+  for (const point of breakdownPoints) {
+    const createdPoint = await createPoint(breakdown.id, point.text, point.order);
+    points.push(createdPoint);
+  }
+
+  return { breakdown, points };
 }
 
