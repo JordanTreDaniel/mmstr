@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/app/components/ui/Button';
 import Card from '@/app/components/ui/Card';
@@ -12,6 +12,14 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { getConversationById } from '@/app/actions/convos';
 
 export default function Home() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const joinConvoId = searchParams.get('join');
