@@ -240,7 +240,7 @@ function HomeContent() {
                   <span>Only then can you respond</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">4.</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 mr-3 flex-shrink-0">5.</span>
                   <span>AI solves any disputes!</span>
                 </li>
               </ol>
