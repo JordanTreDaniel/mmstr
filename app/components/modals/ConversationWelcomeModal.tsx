@@ -21,15 +21,17 @@ const ConversationWelcomeModal: React.FC<ConversationWelcomeModalProps> = ({
   isCreator = false,
 }) => {
   const [copied, setCopied] = useState(false);
-  
-  // Generate shareable URL
-  const shareUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/conversations/${conversationId}`
-    : '';
+
+  // Invite URL: landing page handles ?join= (opens join modal / post-signup nav).
+  // Prefer click-time origin so the copied URL works on any host.
+  const getInviteUrl = () => `${window.location.origin}/?join=${conversationId}`;
+
+  // Display value for the read-only input (same construction as the copy action).
+  const shareUrl = typeof window !== 'undefined' ? getInviteUrl() : '';
 
   const handleCopyUrl = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(getInviteUrl());
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {

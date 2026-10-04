@@ -205,8 +205,10 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   }, [currentUserId, loadMessages]);
 
   const handleShareClick = async () => {
-    const url = window.location.href;
-    
+    // Invite URL: landing page handles ?join= (opens join modal / post-signup nav).
+    // Use click-time origin so the copied URL works on any host.
+    const url = `${window.location.origin}/?join=${id}`;
+
     try {
       await navigator.clipboard.writeText(url);
       setCopySuccess(true);
