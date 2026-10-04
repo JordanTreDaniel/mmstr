@@ -66,6 +66,21 @@ function HomeContent() {
     handleJoinInvitation();
   }, [joinConvoId, currentUser, isMounted]);
 
+  // Shared join-proceed helper: clear join modal state and navigate to the conversation.
+  // On error, log and stay on homepage — never re-open the blocked join modal.
+  const proceedToConversation = (convoId: string) => {
+    setIsJoinModalOpen(false);
+    setSignUpIntent(null);
+    setJoiningConvo(null);
+    setIsJoining(false);
+    setIsSignUpModalOpen(false);
+    try {
+      router.push(`/conversations/${convoId}`);
+    } catch (error) {
+      console.error('Failed to join conversation:', error);
+    }
+  };
+
   const handleJoinDiscussion = async () => {
     if (!joiningConvo) return;
 
@@ -77,16 +92,7 @@ function HomeContent() {
       return;
     }
 
-    setIsJoining(true);
-    try {
-      // Redirect to conversation (participation will be added automatically when they interact)
-      router.push(`/conversations/${joiningConvo.id}`);
-    } catch (error) {
-      console.error('Failed to join conversation:', error);
-      alert('Failed to join conversation. Please try again.');
-    } finally {
-      setIsJoining(false);
-    }
+    proceedToConversation(joiningConvo.id);
   };
 
   const handleSignUp = async (name: string) => {
@@ -100,7 +106,7 @@ function HomeContent() {
     }
   };
 
-  // After sign up completes and currentUser is updated, open the appropriate modal
+  // After sign up completes and currentUser is updated, proceed based on intent
   useEffect(() => {
     // Ensure user has a valid ID before proceeding
     if (currentUser && currentUser.id && currentUser.id > 0 && signUpIntent) {
@@ -108,10 +114,17 @@ function HomeContent() {
       setTimeout(() => {
         if (signUpIntent === 'create') {
           setIsCreateModalOpen(true);
-        } else if (signUpIntent === 'join' && joiningConvo) {
-          setIsJoinModalOpen(true);
+          setSignUpIntent(null);
+        } else if (signUpIntent === 'join') {
+          if (joiningConvo) {
+            proceedToConversation(joiningConvo.id);
+          } else {
+            // Invalid/expired invite — clear state, stay on homepage
+            setIsJoinModalOpen(false);
+            setIsSignUpModalOpen(false);
+            setSignUpIntent(null);
+          }
         }
-        setSignUpIntent(null);
       }, 100);
     }
   }, [currentUser, signUpIntent, joiningConvo]);
