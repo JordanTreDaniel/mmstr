@@ -55,14 +55,22 @@ export async function getUserById(id: number): Promise<User | null> {
 
 /**
  * Get all users
+ * Homepage-reachable (via useCurrentUser) — failures throw with context
+ * so they surface as typed Errors rather than minified TypeErrors.
  */
 export async function getAllUsers(): Promise<User[]> {
-  const result = await client.execute('SELECT * FROM users ORDER BY created_at ASC');
-  return result.rows.map(row => ({
-    id: Number(row.id),
-    name: row.name as string,
-    createdAt: row.created_at as string,
-  }));
+  try {
+    const result = await client.execute('SELECT * FROM users ORDER BY created_at ASC');
+    return result.rows.map(row => ({
+      id: Number(row.id),
+      name: row.name as string,
+      createdAt: row.created_at as string,
+    }));
+  } catch (error) {
+    throw new Error(
+      `getAllUsers failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }
 
 /**

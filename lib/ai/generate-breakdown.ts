@@ -4,7 +4,7 @@
  */
 import { getAIClient } from './client';
 import { getBreakdownSystemPrompt, xmlTag } from './prompts';
-import { executeWithTimeoutAndRetry } from './utils';
+import { executeWithTimeoutAndRetry, extractModelText, parseAIJson } from './utils';
 
 export interface BreakdownPoint {
   text: string;
@@ -46,21 +46,11 @@ export async function generateBreakdown(text: string): Promise<BreakdownPoint[]>
       ])
     );
 
-    // Parse the JSON response
-    const responseText = typeof response.content === 'string' 
-      ? response.content 
-      : String(response.content);
+    // Extract text defensively — throws descriptive error on null/undefined/bad shape
+    const responseText = extractModelText(response, 'generateBreakdown');
 
-    // Extract JSON from response (handle cases where AI wraps it in markdown code blocks)
-    let jsonText = responseText.trim();
-    if (jsonText.startsWith('```json')) {
-      jsonText = jsonText.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-    } else if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/^```\n?/, '').replace(/\n?```$/, '');
-    }
-    jsonText = jsonText.trim();
-
-    const points = JSON.parse(jsonText) as BreakdownPoint[];
+    // Parse JSON safely — validates parsed value is an object/array before return
+    const points = parseAIJson<BreakdownPoint[]>(responseText, 'generateBreakdown');
 
     // Validate the result structure
     if (!Array.isArray(points)) {
@@ -69,8 +59,14 @@ export async function generateBreakdown(text: string): Promise<BreakdownPoint[]>
 
     // Validate each point has required fields
     for (const point of points) {
-      if (typeof point.text !== 'string' || typeof point.order !== 'number') {
-        throw new Error('Invalid point structure in AI response');
+      if (!point || typeof point !== 'object') {
+        throw new Error('Invalid point structure in AI response: entry is not an object');
+      }
+      if (typeof point.text !== 'string') {
+        throw new Error('Invalid point structure in AI response: missing or non-string "text" field');
+      }
+      if (typeof point.order !== 'number') {
+        throw new Error('Invalid point structure in AI response: missing or non-number "order" field');
       }
     }
 

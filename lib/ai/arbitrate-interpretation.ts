@@ -5,7 +5,7 @@
 
 import { getAIClient } from './client';
 import { getArbitrationSystemPrompt, xmlTag } from './prompts';
-import { executeWithTimeoutAndRetry } from './utils';
+import { executeWithTimeoutAndRetry, extractModelText, parseAIJson } from './utils';
 import { generateBreakdown as generateBreakdownAI } from './generate-breakdown';
 import type { Message } from '@/types/entities';
 import type { BreakdownPoint } from './generate-breakdown';
@@ -82,28 +82,18 @@ export async function arbitrateInterpretation(
       ])
     );
 
-    // Parse the JSON response
-    const responseText = typeof response.content === 'string' 
-      ? response.content 
-      : String(response.content);
+    // Extract text defensively — throws descriptive error on null/undefined/bad shape
+    const responseText = extractModelText(response, 'arbitrateInterpretation');
 
-    // Extract JSON from response (handle cases where AI wraps it in markdown code blocks)
-    let jsonText = responseText.trim();
-    if (jsonText.startsWith('```json')) {
-      jsonText = jsonText.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-    } else if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/^```\n?/, '').replace(/\n?```$/, '');
-    }
-    jsonText = jsonText.trim();
+    // Parse JSON safely — validates parsed value is an object before return
+    const result = parseAIJson<ArbitrationResult>(responseText, 'arbitrateInterpretation');
 
-    const result = JSON.parse(jsonText) as ArbitrationResult;
-
-    // Validate the result structure
+    // Validate the result structure (name the field on failure)
     if (result.result !== 'accept' && result.result !== 'reject') {
-      throw new Error('Invalid result value from AI (must be "accept" or "reject")');
+      throw new Error('Invalid AI arbitration response: "result" must be "accept" or "reject"');
     }
     if (typeof result.explanation !== 'string') {
-      throw new Error('Invalid explanation format from AI');
+      throw new Error('Invalid AI arbitration response: "explanation" must be a string');
     }
 
     // Log in development mode

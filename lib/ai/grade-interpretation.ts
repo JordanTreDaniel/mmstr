@@ -5,7 +5,7 @@
 
 import { getAIClient } from './client';
 import { getInterpretationGradingSystemPrompt, xmlTag } from './prompts';
-import { executeWithTimeoutAndRetry } from './utils';
+import { executeWithTimeoutAndRetry, extractModelText, parseAIJson } from './utils';
 import { getConversationMessages } from '@/app/actions/messages';
 import type { Message } from '@/types/entities';
 
@@ -66,27 +66,21 @@ export async function gradeInterpretation(
       ])
     );
 
-    // Parse the JSON response
-    const responseText = typeof response.content === 'string' 
-      ? response.content 
-      : String(response.content);
+    // Extract text defensively — throws descriptive error on null/undefined/bad shape
+    const responseText = extractModelText(response, 'gradeInterpretation');
 
-    // Extract JSON from response (handle cases where AI wraps it in markdown code blocks)
-    let jsonText = responseText.trim();
-    if (jsonText.startsWith('```json')) {
-      jsonText = jsonText.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-    } else if (jsonText.startsWith('```')) {
-      jsonText = jsonText.replace(/^```\n?/, '').replace(/\n?```$/, '');
+    // Parse JSON safely — validates parsed value is an object before return
+    const result = parseAIJson<InterpretationGradingResult>(responseText, 'gradeInterpretation');
+
+    // Validate the result structure (name the field on failure)
+    if (typeof result.similarityScore !== 'number') {
+      throw new Error('Invalid AI grading response: "similarityScore" must be a number');
     }
-    jsonText = jsonText.trim();
-
-    const result = JSON.parse(jsonText) as InterpretationGradingResult;
-
-    // Validate the result structure
-    if (typeof result.similarityScore !== 'number' || 
-        typeof result.passes !== 'boolean' ||
-        typeof result.reasoning !== 'string') {
-      throw new Error('Invalid response format from AI');
+    if (typeof result.passes !== 'boolean') {
+      throw new Error('Invalid AI grading response: "passes" must be a boolean');
+    }
+    if (typeof result.reasoning !== 'string') {
+      throw new Error('Invalid AI grading response: "reasoning" must be a string');
     }
 
     // Ensure similarity score is in valid range
