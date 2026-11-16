@@ -201,6 +201,85 @@ export async function updateGrading(
 }
 
 /**
+ * Get the interpretations for a message by a user that were never graded.
+ * These are leftovers from a failed AI grading call: the attempt row was
+ * inserted, the grading call blew up, and the user was left with an
+ * interpretation that has no outcome (no retry, no response, no feedback).
+ */
+export async function getUngradedInterpretations(
+  messageId: string,
+  userId: number
+): Promise<Interpretation[]> {
+  const interpretations = await getInterpretationsByMessage(messageId, userId);
+  const ungraded: Interpretation[] = [];
+
+  for (const interpretation of interpretations) {
+    const grading = await getGradingByInterpretation(interpretation.id);
+    if (!grading) ungraded.push(interpretation);
+  }
+
+  return ungraded;
+}
+
+/**
+ * Delete an interpretation that was never graded.
+ * Graded interpretations are immutable — they are evidence of an outcome.
+ */
+export async function deleteUngradedInterpretation(id: string): Promise<boolean> {
+  const grading = await getGradingByInterpretation(id);
+  if (grading) {
+    throw new Error('Cannot delete an interpretation that has already been graded');
+  }
+
+  await client.execute({
+    sql: 'DELETE FROM interpretations WHERE id = ?',
+    args: [id],
+  });
+
+  return true;
+}
+
+/**
+ * Discard every never-graded interpretation for this user/message.
+ * Returns how many attempts were removed.
+ */
+export async function discardUngradedInterpretations(
+  messageId: string,
+  userId: number
+): Promise<number> {
+  const ungraded = await getUngradedInterpretations(messageId, userId);
+
+  for (const interpretation of ungraded) {
+    await deleteUngradedInterpretation(interpretation.id);
+  }
+
+  return ungraded.length;
+}
+
+/**
+ * Recover from a failed grading run: grade the newest ungraded attempt and drop
+ * any older duplicates (a retry after a failure used to leave several identical
+ * ungraded rows behind).
+ */
+export async function recoverUngradedInterpretations(
+  messageId: string,
+  userId: number
+): Promise<{ graded: InterpretationGrading | null; discarded: number }> {
+  const ungraded = await getUngradedInterpretations(messageId, userId);
+  if (ungraded.length === 0) {
+    return { graded: null, discarded: 0 };
+  }
+
+  const [latest, ...stale] = ungraded;
+  for (const interpretation of stale) {
+    await deleteUngradedInterpretation(interpretation.id);
+  }
+
+  const graded = await gradeInterpretation(latest.id);
+  return { graded, discarded: stale.length };
+}
+
+/**
  * Create a grading response (dispute)
  * Automatically triggers arbitration after the dispute is submitted
  */

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Card from '@/app/components/ui/Card';
 import Button from '@/app/components/ui/Button';
 import Textarea from '@/app/components/ui/Textarea';
-import { createInterpretation, gradeInterpretation } from '@/app/actions/interpretations';
+import { createInterpretation, gradeInterpretation, deleteUngradedInterpretation } from '@/app/actions/interpretations';
 import { MESSAGE_MAX_CHARS, validateMessage } from '@/lib/character-validation';
 import type { Message } from '@/types/entities';
 
@@ -55,6 +55,8 @@ const SubmitInterpretationStep: React.FC<SubmitInterpretationStepProps> = ({
     setIsSubmitting(true);
     setError(null);
 
+    let createdInterpretationId: string | null = null;
+
     try {
       // Create interpretation record
       const interpretation = await createInterpretation(
@@ -63,6 +65,7 @@ const SubmitInterpretationStep: React.FC<SubmitInterpretationStepProps> = ({
         interpretationText,
         attemptNumber
       );
+      createdInterpretationId = interpretation.id;
 
       // Show AI grading loading state
       setIsSubmitting(false);
@@ -76,7 +79,21 @@ const SubmitInterpretationStep: React.FC<SubmitInterpretationStepProps> = ({
       onInterpretationSubmitted();
     } catch (err) {
       console.error('Error submitting interpretation:', err);
-      setError('Failed to submit interpretation. Please try again.');
+
+      // Do not leave a silent, ungraded attempt behind: it would consume the
+      // attempt number and leave the user with no outcome to act on.
+      if (createdInterpretationId) {
+        try {
+          await deleteUngradedInterpretation(createdInterpretationId);
+        } catch (cleanupError) {
+          console.error('Failed to roll back ungraded interpretation:', cleanupError);
+        }
+      }
+
+      setError(
+        'The AI could not grade this attempt, so it was not counted. ' +
+        'Please try submitting again.'
+      );
       setIsSubmitting(false);
       setIsGrading(false);
     }

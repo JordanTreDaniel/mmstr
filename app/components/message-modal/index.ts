@@ -3,3 +3,4 @@ export { default as SubmitInterpretationStep } from './SubmitInterpretationStep'
 export { default as ReviewInterpretationStep } from './ReviewInterpretationStep';
 export { default as RejectedInterpretationStep } from './RejectedInterpretationStep';
 export { default as ArbitrationStep } from './ArbitrationStep';
+export { default as UngradedInterpretationStep } from './UngradedInterpretationStep';

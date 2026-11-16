@@ -13,11 +13,11 @@ export type AIProvider = 'anthropic' | 'openai';
  * `OPENAI_MODEL` / `ANTHROPIC_MODEL`, so the next retirement is an env change
  * in Doppler instead of a code change + redeploy.
  *
- * NOTE: `gpt-4.1` accepts a custom temperature. Reasoning models (gpt-5*,
- * o-series) reject anything but the default, so lib/ai/client.ts drops the
- * temperature for those.
+ * NOTE: `gpt-6-luna` is a reasoning model — it rejects any temperature but the
+ * default (verified 400 on `temperature: 0.3`), so lib/ai/client.ts omits the
+ * temperature for gpt-5+/gpt-6+/o-series models.
  */
-export const DEFAULT_OPENAI_MODEL = 'gpt-4.1';
+export const DEFAULT_OPENAI_MODEL = 'gpt-6-luna';
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-5';
 
 const optionalEnvVars = [

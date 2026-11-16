@@ -58,10 +58,10 @@ export function getAIClient(): AIClient {
 
     const temperature = 0.3; // Lower temperature for more consistent, unbiased judgments
 
-    // Reasoning models (gpt-5*, o-series) reject any temperature but the
-    // default. Verified against the live API: gpt-5-mini returns
-    // 400 "Unsupported value: 'temperature' does not support 0.3".
-    const isReasoningModel = (model: string) => /^(gpt-5|o[1-9])/i.test(model);
+    // Reasoning models (gpt-5+, gpt-6+, o-series) reject any temperature but
+    // the default. Verified against the live API: gpt-5-mini and gpt-6-luna
+    // both return 400 "Unsupported value: 'temperature' does not support 0.3".
+    const isReasoningModel = (model: string) => /^(gpt-[5-9]|o[1-9])/i.test(model);
 
     if (provider === 'anthropic') {
       const apiKey = getAnthropicApiKey();

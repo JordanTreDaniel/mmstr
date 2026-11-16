@@ -4,7 +4,7 @@
  * plus defensive response-shape helpers for LangChain model output.
  */
 
-const DEFAULT_TIMEOUT_MS = 60000; // 60 seconds
+const DEFAULT_TIMEOUT_MS = 120000; // 120 seconds (reasoning models are slower than gpt-4-class)
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_INITIAL_BACKOFF_MS = 1000; // 1 second
 

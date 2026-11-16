@@ -12,6 +12,7 @@ import SubmitInterpretationStep from '@/app/components/message-modal/SubmitInter
 import ReviewInterpretationStep from '@/app/components/message-modal/ReviewInterpretationStep';
 import RejectedInterpretationStep from '@/app/components/message-modal/RejectedInterpretationStep';
 import ArbitrationStep from '@/app/components/message-modal/ArbitrationStep';
+import UngradedInterpretationStep from '@/app/components/message-modal/UngradedInterpretationStep';
 import { getGradingByInterpretation, getArbitrationByInterpretation, getGradingResponse } from '@/app/actions/interpretations';
 import type { Message, Interpretation, InterpretationGrading, Convo, Arbitration, InterpretationGradingResponse } from '@/types/entities';
 
@@ -56,7 +57,7 @@ function determineViewState(
   gradings: Map<string, InterpretationGrading>,
   arbitrations: Map<string, Arbitration>,
   currentUserId: number | null
-): 'view' | 'submit' | 'review' | 'rejected' | 'arbitration' {
+): 'view' | 'submit' | 'review' | 'rejected' | 'arbitration' | 'ungraded' {
   if (!message || !currentUserId) return 'view';
   
   // If current user is the author, they review interpretations
@@ -85,7 +86,13 @@ function determineViewState(
   const latestInterpretation = userInterpretations[0]; // Already sorted by attempt_number DESC
   const latestGrading = gradings.get(latestInterpretation.id);
   const latestArbitration = arbitrations.get(latestInterpretation.id);
-  
+
+  // A saved attempt with no grading is the aftermath of a failed grading call
+  // (provider error / retired model). It must be recoverable, not a dead end.
+  if (!latestGrading) {
+    return 'ungraded';
+  }
+
   // Check if latest interpretation was rejected (and not accepted by arbitration)
   if (latestGrading && latestGrading.status === 'rejected') {
     // If arbitration exists, show arbitration view (regardless of result)
@@ -216,6 +223,14 @@ const MessageModal: React.FC<MessageModalProps> = ({
       })
     : undefined;
 
+  // Latest attempt by this user that was saved but never graded (AI failure)
+  const ungradedInterpretation = message && currentUserId && message.userId !== currentUserId
+    ? interpretations.find(interp => {
+        if (interp.userId !== currentUserId) return false;
+        return !gradings.get(interp.id);
+      })
+    : undefined;
+
   // Check if message requires interpretation
   const needsInterpretation = message ? requiresInterpretation(message.text) : false;
 
@@ -289,6 +304,16 @@ const MessageModal: React.FC<MessageModalProps> = ({
                 gradingResponse={gradings.get(arbitratedInterpretation.id) 
                   ? gradingResponses.get(gradings.get(arbitratedInterpretation.id)!.id) || null
                   : null}
+              />
+            ) : viewState === 'ungraded' && ungradedInterpretation && currentUserId ? (
+              // Recovery view — attempt was saved but the AI grading call failed
+              <UngradedInterpretationStep
+                message={message}
+                interpretation={ungradedInterpretation}
+                currentUserId={currentUserId}
+                onResolved={async () => {
+                  await loadMessageData();
+                }}
               />
             ) : viewState === 'rejected' && rejectedInterpretation && convo && currentStep !== 'submit-interpretation' ? (
               // Rejected Interpretation View
