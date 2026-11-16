@@ -5,6 +5,21 @@
 
 export type AIProvider = 'anthropic' | 'openai';
 
+/**
+ * Default model IDs.
+ *
+ * OpenAI retired `gpt-4` (API returns 404 `model_not_found`), which broke every
+ * AI feature on 2026-11-16. Model IDs are now overridable at runtime via
+ * `OPENAI_MODEL` / `ANTHROPIC_MODEL`, so the next retirement is an env change
+ * in Doppler instead of a code change + redeploy.
+ *
+ * NOTE: `gpt-4.1` accepts a custom temperature. Reasoning models (gpt-5*,
+ * o-series) reject anything but the default, so lib/ai/client.ts drops the
+ * temperature for those.
+ */
+export const DEFAULT_OPENAI_MODEL = 'gpt-4.1';
+export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-5';
+
 const optionalEnvVars = [
   'LANGSMITH_TRACING',
   'LANGSMITH_API_KEY',
@@ -68,6 +83,20 @@ export function getOpenAIApiKey(): string {
     throw new Error('OPENAI_API_KEY is not set in environment variables');
   }
   return key;
+}
+
+/**
+ * Get the OpenAI model ID from environment (falls back to DEFAULT_OPENAI_MODEL)
+ */
+export function getOpenAIModel(): string {
+  return process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
+}
+
+/**
+ * Get the Anthropic model ID from environment (falls back to DEFAULT_ANTHROPIC_MODEL)
+ */
+export function getAnthropicModel(): string {
+  return process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
 }
 
 /**

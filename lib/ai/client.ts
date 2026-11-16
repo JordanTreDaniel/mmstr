@@ -6,7 +6,14 @@
 
 import { ChatAnthropic } from '@langchain/anthropic';
 import { ChatOpenAI } from '@langchain/openai';
-import { getChosenProvider, getAnthropicApiKey, getOpenAIApiKey, getLangSmithConfig } from '@/lib/env';
+import {
+  getChosenProvider,
+  getAnthropicApiKey,
+  getOpenAIApiKey,
+  getAnthropicModel,
+  getOpenAIModel,
+  getLangSmithConfig,
+} from '@/lib/env';
 
 type AIClient = ChatAnthropic | ChatOpenAI;
 
@@ -51,19 +58,26 @@ export function getAIClient(): AIClient {
 
     const temperature = 0.3; // Lower temperature for more consistent, unbiased judgments
 
+    // Reasoning models (gpt-5*, o-series) reject any temperature but the
+    // default. Verified against the live API: gpt-5-mini returns
+    // 400 "Unsupported value: 'temperature' does not support 0.3".
+    const isReasoningModel = (model: string) => /^(gpt-5|o[1-9])/i.test(model);
+
     if (provider === 'anthropic') {
       const apiKey = getAnthropicApiKey();
+      const model = getAnthropicModel();
       _client = new ChatAnthropic({
-        modelName: 'claude-3-5-sonnet-20241022', // Latest Claude 3.5 Sonnet model
-        temperature,
+        modelName: model,
+        ...(isReasoningModel(model) ? {} : { temperature }),
         anthropicApiKey: apiKey,
       });
     } else {
       // Default to OpenAI
       const apiKey = getOpenAIApiKey();
+      const model = getOpenAIModel();
       _client = new ChatOpenAI({
-        modelName: 'gpt-4',
-        temperature,
+        modelName: model,
+        ...(isReasoningModel(model) ? {} : { temperature }),
         openAIApiKey: apiKey,
       });
     }
