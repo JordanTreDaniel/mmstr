@@ -280,6 +280,37 @@ export async function recoverUngradedInterpretations(
 }
 
 /**
+ * Withdraw an attempt that is still awaiting the author's review.
+ * The author has not acted yet, so the interpreter may retract it and try again
+ * instead of being stuck with no path forward.
+ */
+export async function withdrawPendingInterpretation(id: string): Promise<boolean> {
+  const grading = await getGradingByInterpretation(id);
+  if (!grading) {
+    throw new Error('This attempt has no grading to withdraw');
+  }
+  if (grading.status !== 'pending') {
+    throw new Error('Only a pending attempt can be withdrawn');
+  }
+
+  const arbitration = await getArbitrationByInterpretation(id);
+  if (arbitration) {
+    throw new Error('This attempt was arbitrated and can no longer be withdrawn');
+  }
+
+  await client.execute({
+    sql: 'DELETE FROM interpretation_gradings WHERE interpretation_id = ?',
+    args: [id],
+  });
+  await client.execute({
+    sql: 'DELETE FROM interpretations WHERE id = ?',
+    args: [id],
+  });
+
+  return true;
+}
+
+/**
  * Create a grading response (dispute)
  * Automatically triggers arbitration after the dispute is submitted
  */

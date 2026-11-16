@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Modal from '@/app/components/ui/Modal';
+import Button from '@/app/components/ui/Button';
 import { getMessageById } from '@/app/actions/messages';
 import { getInterpretationsByMessage } from '@/app/actions/interpretations';
 import { getUserById } from '@/app/actions/users';
@@ -13,7 +14,7 @@ import ReviewInterpretationStep from '@/app/components/message-modal/ReviewInter
 import RejectedInterpretationStep from '@/app/components/message-modal/RejectedInterpretationStep';
 import ArbitrationStep from '@/app/components/message-modal/ArbitrationStep';
 import UngradedInterpretationStep from '@/app/components/message-modal/UngradedInterpretationStep';
-import { getGradingByInterpretation, getArbitrationByInterpretation, getGradingResponse } from '@/app/actions/interpretations';
+import { getGradingByInterpretation, getArbitrationByInterpretation, getGradingResponse, withdrawPendingInterpretation } from '@/app/actions/interpretations';
 import type { Message, Interpretation, InterpretationGrading, Convo, Arbitration, InterpretationGradingResponse } from '@/types/entities';
 
 export interface MessageModalProps {
@@ -553,9 +554,23 @@ const MessageModal: React.FC<MessageModalProps> = ({
                         } else if (latestGrading?.status === 'pending') {
                           return (
                             <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
-                              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
                                 ⏳ Your interpretation is pending review by the author.
                               </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={async () => {
+                                  try {
+                                    await withdrawPendingInterpretation(latestInterp.id);
+                                    await loadMessageData();
+                                  } catch (err) {
+                                    console.error('Failed to withdraw interpretation:', err);
+                                  }
+                                }}
+                              >
+                                Withdraw and Try Again
+                              </Button>
                             </div>
                           );
                         }
