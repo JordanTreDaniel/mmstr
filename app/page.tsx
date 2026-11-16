@@ -75,7 +75,12 @@ function HomeContent() {
     setIsJoining(false);
     setIsSignUpModalOpen(false);
     try {
-      router.push(`/conversations/${convoId}`);
+      // Hard navigation on purpose. A client-side router.push() issued right after
+      // the identity state update races the in-flight navigation, and Next reverts
+      // the URL to /?join=<id> (observed bounce: the invitee lands back on the
+      // landing page). A fresh document load makes the conversation page read the
+      // new identity from localStorage on first render, so it stays put.
+      window.location.assign(`/conversations/${convoId}`);
     } catch (error) {
       console.error('Failed to join conversation:', error);
     }
